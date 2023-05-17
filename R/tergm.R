@@ -167,6 +167,7 @@ tergm <- function(formula, constraints = ~., estimate, times=NULL, offset.coef=N
   if(!inherits(formula,"formula"))
     stop("Argument formula must be a formula.")
   
+  # This calls the tergm.EGMME function here
   out <- switch(estimate,
                 CMLE=tergm.CMLE(formula=formula, times=times, constraints=constraints, estimate="MLE", offset.coef=offset.coef, target.stats=target.stats, eval.loglik=eval.loglik,control=control, verbose=verbose, ..., basis = basis),
                 CMPLE=tergm.CMLE(formula=formula, times=times, constraints=constraints, estimate="MPLE", offset.coef=offset.coef, target.stats=target.stats, eval.loglik=eval.loglik,control=control, verbose=verbose, ..., basis = basis),

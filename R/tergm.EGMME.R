@@ -59,6 +59,7 @@ tergm.EGMME <- function(formula, constraints, offset.coef,
           control[control.transfer[[arg]]] <- list(control[[arg]])
 
   if (verbose) message("Initializing Metropolis-Hastings proposal.")
+  # Creates two proposals, one for the EGMME and one for SAN
   proposal <- ergm_proposal(constraints, weights = control$MCMC.prop.weights, arguments = control$MCMC.prop.args, nw = nw, hints = control$MCMC.prop, class="t")
   proposal.SAN <- ergm_proposal(constraints, weights = control$SAN$SAN.prop.weights, arguments = control$SAN$SAN.prop.args, nw = nw, hints = control$SAN$SAN.prop, class="c")
   
@@ -155,8 +156,9 @@ tergm.EGMME <- function(formula, constraints, offset.coef,
     if(verbose && !is.null(ergm.getCluster(control))) message("Using parallel cluster.")
   }
   
+  # I believe `Cout` contains the result from the Gradient Descent
   Cout <- switch(control$EGMME.main.method,
-                 "Gradient-Descent" = tergm.EGMME.GD(coef(initialfit),
+                 "Gradient-Descent" = tergm.EGMME.BayesOpt(coef(initialfit),
                    nw, model, model.mon,
                    control=control, proposal=proposal,
                   verbose),
