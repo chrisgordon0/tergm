@@ -6,9 +6,6 @@
 # Repeat
 
 tergm.EGMME.bayesOpt <- function(theta0, nw, model, model.mon, control, proposal, verbose=FALSE){
-  
-  theta <- theta0
-  #print(theta)
 
   # this is where we combine models and pad out eta 
   # with 0s as necessary to accommodate the monitoring model
@@ -19,9 +16,9 @@ tergm.EGMME.bayesOpt <- function(theta0, nw, model, model.mon, control, proposal
   control$collect <- TRUE
   control$changes <- FALSE
   
-  control$time.burnin <- 10
-  control$time.interval <- 10
-  control$time.samplesize <- 10
+  control$time.burnin <- 1
+  control$time.interval <- 1
+  control$time.samplesize <- 1
 
   
   # Must assign globals here, and after the optimization I should clean them up
@@ -29,7 +26,7 @@ tergm.EGMME.bayesOpt <- function(theta0, nw, model, model.mon, control, proposal
   # The reason I must make them globals is because the cost function for
   # Bayesian Optimization can only have one parameter.
   global.control <<- control
-  global.theta <<- theta
+  global.theta <<- theta0
   global.nw <<- nw
   global.model <<- model
   global.model.comb <<- model.comb
@@ -40,13 +37,8 @@ tergm.EGMME.bayesOpt <- function(theta0, nw, model, model.mon, control, proposal
   # Need to do this as the cost function cannot be a vector
   # (limitation in the rBayesianOptimization package)
   # TODO: Maybe change which optimization package we use.
-  bounds <- list()
-  bounds_length <- length(theta)
-  
-  for (i in 1:vector_length) {
-    bounds[[paste0("x", i)]] <- c(-1, 1)
-  }
-  
+  bounds <- create_bounds(theta0)
+
   optim_result <- BayesianOptimization(optimCostFunctionWrapper,
                                        bounds = bounds,
                                        init_points = 2, n_iter = 2,
@@ -58,7 +50,20 @@ tergm.EGMME.bayesOpt <- function(theta0, nw, model, model.mon, control, proposal
   
   print(optimal_inputs)
   print(optimal_value)
+    
+  # At the end do something like this to clean up:
+  # rm(global.control) ... etc
+}
 
+create_bounds <- function(theta) {
+  bounds <- list()
+  bounds_length <- length(theta)
+  
+  for (i in 1:bounds_length) {
+    bounds[[paste0("x", i)]] <- c(-1, 1)
+  }
+  
+  return(bounds)
 }
 
 mahalanobisDist <- function(target_statistics) {
@@ -66,7 +71,6 @@ mahalanobisDist <- function(target_statistics) {
   inv_cov_matrix <- solve(cov_matrix)
   
   dist <- sqrt(mahalanobis(target_statistics, rep(0, ncol(target_statistics)), inv_cov_matrix))
-  
   return(dist)
 }
 
@@ -86,6 +90,9 @@ optimCostFunction <- function(theta) {
   current_ergm_state <- z$state
   
   target_statistics <- z$statsmatrix
+  
+  # For debugging
+  mahalanob <<- mahalanobisDist(target_statistics)
   
   return(list(Score = mahalanobisDist(target_statistics), Pred = 0))  
 }
