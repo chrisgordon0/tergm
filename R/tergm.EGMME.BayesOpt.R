@@ -18,7 +18,7 @@ tergm.EGMME.bayesOpt <- function(theta0, nw, model, model.mon, control, proposal
   
   control$time.burnin <- 1
   control$time.interval <- 1
-  control$time.samplesize <- 1
+  control$time.samplesize <- 100
 
   
   # Must assign globals here, and after the optimization I should clean them up
@@ -53,6 +53,8 @@ tergm.EGMME.bayesOpt <- function(theta0, nw, model, model.mon, control, proposal
     
   # At the end do something like this to clean up:
   # rm(global.control) ... etc
+  
+  
 }
 
 create_bounds <- function(theta) {
@@ -67,10 +69,21 @@ create_bounds <- function(theta) {
 }
 
 mahalanobisDist <- function(target_statistics) {
+  
   cov_matrix <- cov(target_statistics)
+
+  if (rcond(cov_matrix) < 0.01) {
+    return(10000)
+  }
+  
+
+  cov <<- cov_matrix
+  
   inv_cov_matrix <- solve(cov_matrix)
   
-  dist <- sqrt(mahalanobis(target_statistics, rep(0, ncol(target_statistics)), inv_cov_matrix))
+  inv <<- inv_cov_matrix
+  
+  dist <- sqrt(mahalanobis(colMeans(target_statistics), rep(0, ncol(target_statistics)), inv_cov_matrix))
   return(dist)
 }
 
@@ -86,15 +99,17 @@ optimCostFunction <- function(theta) {
 
   z <- tergm_MCMC_slave(current_ergm_state, eta.comb, global.control, global.verbose)
   
-  # override ergm state - why?
+  # optional to change ergm state every time
   current_ergm_state <- z$state
   
   target_statistics <- z$statsmatrix
   
+  targets <<- target_statistics
+  
   # For debugging
   mahalanob <<- mahalanobisDist(target_statistics)
   
-  return(list(Score = mahalanobisDist(target_statistics), Pred = 0))  
+  return(list(Score = mahalanobisDist(target_statistics), Pred = 0.1))  
 }
 
 optimCostFunctionWrapper <- function(...) {
