@@ -34,38 +34,34 @@ tergm.EGMME.bayesOpt <- function(theta0, nw, model, model.mon, control, proposal
   global.proposal <<- proposal
   global.verbose <<- verbose
   
-  # Need to do this as the cost function cannot be a vector
-  # (limitation in the rBayesianOptimization package)
-  # TODO: Maybe change which optimization package we use.
-  bounds <- create_bounds(theta0)
-
-  optim_result <- BayesianOptimization(optimCostFunctionWrapper,
-                                       bounds = bounds,
-                                       init_points = 2, n_iter = 2,
-                                       acq = "ucb", kappa = 1, eps = 0.0,
-                                       verbose = TRUE)
   
-  optimal_inputs <- optim_result$Best_Par
-  optimal_value <- optim_result$Best_Value
+  obj.fun <- makeSingleObjectiveFunction(
+    name = "optimCostFunction",
+    fn = optimCostFunction,
+    par.set = makeParamSet(
+      makeNumericVectorParam("theta", len = length(theta0), lower = -10, upper = 10)
+    ),
+    minimize = TRUE
+  )
   
-  print(optimal_inputs)
-  print(optimal_value)
+  des = generateDesign(n = 100, par.set = getParamSet(obj.fun), fun = lhs::randomLHS)
+  
+  des$y = apply(des, 1, obj.fun)
+  
+  surr.km = makeLearner("regr.km", predict.type = "se", covtype = "matern3_2", control = list(trace = FALSE))
+  
+  mboControl = makeMBOControl()
+  mboControl = setMBOControlTermination(mboControl, iters = 100)
+  mboControl = setMBOControlInfill(mboControl, crit = makeMBOInfillCritEI())
+  
+  run = mbo(obj.fun, design = des, learner = surr.km, control = mboControl, show.info = TRUE)
+  
+  print(run)
     
   # At the end do something like this to clean up:
   # rm(global.control) ... etc
   
-  
-}
-
-create_bounds <- function(theta) {
-  bounds <- list()
-  bounds_length <- length(theta)
-  
-  for (i in 1:bounds_length) {
-    bounds[[paste0("x", i)]] <- c(-1, 1)
-  }
-  
-  return(bounds)
+  # TODO: need to return something
 }
 
 mahalanobisDist <- function(target_statistics) {
@@ -76,7 +72,6 @@ mahalanobisDist <- function(target_statistics) {
     return(10000)
   }
   
-
   cov <<- cov_matrix
   
   inv_cov_matrix <- solve(cov_matrix)
@@ -109,11 +104,6 @@ optimCostFunction <- function(theta) {
   # For debugging
   mahalanob <<- mahalanobisDist(target_statistics)
   
-  return(list(Score = mahalanobisDist(target_statistics), Pred = 0.1))  
-}
-
-optimCostFunctionWrapper <- function(...) {
-  theta <- c(...)
-  return(optimCostFunction(theta))
+  return(mahalanobisDist(target_statistics))  
 }
 
