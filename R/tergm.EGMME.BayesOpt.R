@@ -17,8 +17,8 @@ tergm.EGMME.bayesOpt <- function(theta0, nw, model, model.mon, control, proposal
   control$changes <- FALSE
   
   control$time.burnin <- 50
-  control$time.interval <- 50
-  control$time.samplesize <- 100
+  control$time.interval <- 20
+  control$time.samplesize <- 200
   
   # Must assign globals here, and after the optimization I should clean them up
   # and remove them from the environment.
@@ -34,6 +34,9 @@ tergm.EGMME.bayesOpt <- function(theta0, nw, model, model.mon, control, proposal
   
   #Rprof()
   
+  parallelRegisterLevels(levels = "objective")
+  parallelStart("multicore", 4, level="custom.objective")
+  
   obj.fun <- makeSingleObjectiveFunction(
     name = "optimCostFunction",
     fn = parallelOptimCostFunction,
@@ -46,18 +49,20 @@ tergm.EGMME.bayesOpt <- function(theta0, nw, model, model.mon, control, proposal
     noisy = TRUE
   )
   
-  des = generateDesign(n = 20, par.set = getParamSet(obj.fun), fun = lhs::randomLHS)
+  des = generateDesign(n = 5, par.set = getParamSet(obj.fun), fun = lhs::randomLHS)
   
   des$y = apply(des, 1, obj.fun)
   
   mboControl = makeMBOControl()
-  mboControl = setMBOControlTermination(mboControl, iters = 50)
+  mboControl = setMBOControlTermination(mboControl, iters = 5)
   #mboControl = setMBOControlInfill(mboControl, crit = makeMBOInfillCritAEI(aei.use.nugget = TRUE))
   mboControl = setMBOControlInfill(mboControl, crit = makeMBOInfillCritEI())
   lrn = makeMBOLearner(mboControl, obj.fun, nugget.estim = TRUE)
   
   
   run = mbo(obj.fun, design = des, learner = lrn, control = mboControl, show.info = TRUE)
+  
+  parallelStop()
   
   #Rprof()
   
@@ -157,9 +162,8 @@ optimCostFunction <- function(theta) {
 parallelOptimCostFunction <- function(theta) {
   rep.theta = replicate(4, theta, simplify = FALSE)
   
-  parallelStart("multicore", 4)
-  result = parallelMap(optimCostFunction, rep.theta, simplify = TRUE)
-  
+  result = parallelMap(optimCostFunction, rep.theta, simplify = TRUE, level="custom.objective")
+
   return(mean(result))
 }
 
