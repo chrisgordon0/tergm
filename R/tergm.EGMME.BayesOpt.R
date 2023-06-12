@@ -16,48 +16,60 @@ tergm.EGMME.bayesOpt <- function(theta0, nw, model, model.mon, control, proposal
   control$collect <- TRUE
   control$changes <- FALSE
   
-  control$time.burnin <- 1
-  control$time.interval <- 1
-  control$time.samplesize <- 10
+  control$time.burnin <- 50
+  control$time.interval <- 50
+  control$time.samplesize <- 100
   
   # Must assign globals here, and after the optimization I should clean them up
   # and remove them from the environment.
   # The reason I must make them globals is because the cost function for
   # Bayesian Optimization can't have helper parameters (i think)
   global.control <<- control
-  global.nw <<- nw
   global.model <<- model
-  global.model.comb <<- model.comb
   global.model.mon <<- model.mon
-  global.proposal <<- proposal
   global.verbose <<- verbose
+  global.current_ergm_state <<- ergm_state(nw, model=model.comb, proposal=proposal,
+                                   stats=c(numeric(global.model$etamap$etalength), global.model.mon$nw.stats - global.model.mon$target.stats))
+  global.current_best_dist <<- Inf
+  
+  #Rprof()
   
   obj.fun <- makeSingleObjectiveFunction(
     name = "optimCostFunction",
-    fn = optimCostFunction,
+    fn = parallelOptimCostFunction,
     par.set = makeParamSet(
-      makeNumericVectorParam("theta", len = length(theta0), lower = -10, upper = 10)
+      #makeNumericVectorParam("theta", len = length(theta0), lower = -10, upper = 10)
+      makeNumericParam("theta1", lower=-6, upper=-4),
+      makeNumericParam("theta2", lower=1, upper=3)
     ),
-    minimize = TRUE
+    minimize = TRUE,
+    noisy = TRUE
   )
   
-  des = generateDesign(n = 5, par.set = getParamSet(obj.fun), fun = lhs::randomLHS)
+  des = generateDesign(n = 20, par.set = getParamSet(obj.fun), fun = lhs::randomLHS)
   
   des$y = apply(des, 1, obj.fun)
   
-  surr.km = makeLearner("regr.km", predict.type = "se", covtype = "matern3_2", control = list(trace = FALSE))
-  
   mboControl = makeMBOControl()
-  mboControl = setMBOControlTermination(mboControl, iters = 10)
+  mboControl = setMBOControlTermination(mboControl, iters = 50)
+  #mboControl = setMBOControlInfill(mboControl, crit = makeMBOInfillCritAEI(aei.use.nugget = TRUE))
   mboControl = setMBOControlInfill(mboControl, crit = makeMBOInfillCritEI())
+  lrn = makeMBOLearner(mboControl, obj.fun, nugget.estim = TRUE)
   
-  run = mbo(obj.fun, design = des, learner = surr.km, control = mboControl, show.info = TRUE)
+  
+  run = mbo(obj.fun, design = des, learner = lrn, control = mboControl, show.info = TRUE)
+  
+  #Rprof()
+  
+  #print(run)
+  
+  plot(run)
   
   # remove later?
   print(run)
-    
+  
   newnetwork <- as.network(
-                  ergm_state(global.nw, model=global.model.comb, proposal=global.proposal,
+                  ergm_state(global.nw, model=model.comb, proposal=proposal,
                              stats=c(numeric(global.model$etamap$etalength), 
                              global.model.mon$nw.stats - global.model.mon$target.stats))
                 )
@@ -65,14 +77,13 @@ tergm.EGMME.bayesOpt <- function(theta0, nw, model, model.mon, control, proposal
   theta <- unlist(run$x)
   eta <- ergm.eta(theta, global.model$etamap)
   
+  print(eta)
+  
   # remove all of the global from the environment
-  rm(global.control)
-  rm(global.nw)
-  rm(global.model)
-  rm(global.model.comb)
-  rm(global.model.mon)
-  rm(global.proposal)
-  rm(global.verbose)
+  #rm(global.control)
+  #rm(global.model)
+  #rm(global.model.mon)
+  #rm(global.verbose)
     
   return(
     list(#nw.diff=z$nw.diff,
@@ -93,42 +104,67 @@ mahalanobisDist <- function(target_statistics) {
     return(10^13)
   }
   
-  cond <<- rcond(cov_matrix)
+  #cond <<- rcond(cov_matrix)
   
   # debugging
-  cov <<- cov_matrix
+  #cov <<- cov_matrix
 
   inv_cov_matrix <- solve(cov_matrix)
   
   # debugging
   #inv <<- inv_cov_matrix
   
-  dist <- sqrt(mahalanobis(colMeans(target_statistics), rep(0, ncol(target_statistics)), inv_cov_matrix))
+  #dist <- sqrt(mahalanobis(colMeans(target_statistics), rep(0, ncol(target_statistics)), inv_cov_matrix))
+  #dist <- log(mahalanobis(colMeans(target_statistics), rep(0, ncol(target_statistics)), inv_cov_matrix))
+  dist <- mahalanobis(colMeans(target_statistics), rep(0, ncol(target_statistics)), inv_cov_matrix)
   return(dist)
 }
 
 optimCostFunction <- function(theta) {
-  
-  current_ergm_state <- ergm_state(global.nw, model=global.model.comb, proposal=global.proposal,
-                                   stats=c(numeric(global.model$etamap$etalength), global.model.mon$nw.stats - global.model.mon$target.stats))
+  #theta <-c(-5.194653, 2.194362)
+  #theta1 <<- theta
   
   # call many times
   # re-run every time update theta
   eta <- ergm.eta(theta, global.model$etamap)
   eta.comb <- c(eta, numeric(global.model.mon$etamap$etalength))
 
-  z <- tergm_MCMC_slave(current_ergm_state, eta.comb, global.control, global.verbose)
-  
-  # optional to change ergm state every time
-  current_ergm_state <- z$state
+  z <- tergm_MCMC_slave(global.current_ergm_state, eta.comb, global.control, global.verbose)
   
   target_statistics <- z$statsmatrix
+
+    # optional to change ergm state every time
+  # this doesnt do anything, need to make current_ergm_state global if i want to do this...
+  # global.current_ergm_state <<- z$state
   
-  targets <<- target_statistics
+  res <- mahalanobisDist(target_statistics)
+  
+  if (global.current_best_dist > res) {
+    global.current_best_dist <<- res
+    global.current_ergm_state <<- z$state
+  }
+  
+
+  #targets <<- target_statistics
   
   # For debugging
   # mahalanob <<- mahalanobisDist(target_statistics)
   
-  return(mahalanobisDist(target_statistics))  
+  return(res)
+  #return(mahalanobisDist(target_statistics))  
 }
+
+parallelOptimCostFunction <- function(theta) {
+  rep.theta = replicate(4, theta, simplify = FALSE)
+  
+  parallelStart("multicore", 4)
+  result = parallelMap(optimCostFunction, rep.theta, simplify = TRUE)
+  
+  return(mean(result))
+}
+
+
+
+
+
 
