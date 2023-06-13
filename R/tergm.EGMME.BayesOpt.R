@@ -32,8 +32,8 @@ tergm.EGMME.bayesOpt <- function(theta0, nw, model, model.mon, control, proposal
                                    stats=c(numeric(global.model$etamap$etalength), global.model.mon$nw.stats - global.model.mon$target.stats))
   global.current_best_dist <<- Inf
   
-
-  run <- runWithMultipleSamplesOfObjective()
+  run <- runWithMuleipleSamplesOfAcquisitionParallelDesign()
+  #run <- runWithMultipleSamplesOfObjective()
   #run <- runPlain()
   
   
@@ -107,7 +107,6 @@ runWithMultipleSamplesOfObjective <- function() {
     name = "optimCostFunction",
     fn = parallelOptimCostFunction,
     par.set = makeParamSet(
-      #makeNumericVectorParam("theta", len = length(theta0), lower = -10, upper = 10)
       makeNumericParam("theta1", lower=-6, upper=-4),
       makeNumericParam("theta2", lower=1, upper=3)
     ),
@@ -127,6 +126,46 @@ runWithMultipleSamplesOfObjective <- function() {
   
   
   run = mbo(obj.fun, design = des, learner = lrn, control = mboControl, show.info = TRUE)
+  
+  parallelStop()
+  
+  return(run)
+}
+
+runWithMuleipleSamplesOfAcquisitionParallelDesign <- function() {
+  parallelRegisterLevels(levels = "objective")
+  parallelStart("multicore", 4, show.info = TRUE)
+  
+  obj.fun <- makeSingleObjectiveFunction(
+    name = "optimCostFunction",
+    fn = optimCostFunction,
+    par.set = makeParamSet(
+      makeNumericParam("theta1", lower=-10, upper=10),
+      makeNumericParam("theta2", lower=-10, upper=10)
+    ),
+    minimize = TRUE,
+    noisy = TRUE
+  )
+  
+  des = generateDesign(n = 10, par.set = getParamSet(obj.fun), fun = lhs::randomLHS)
+  
+  des$y = parallelMap(optimCostFunctionWrapper, des[,1], des[,2], simplify = TRUE)
+
+  print(des)
+  
+  mboControl = makeMBOControl(propose.points = 4)
+  
+  mboControl = setMBOControlMultiPoint(mboControl, method = "cl", cl.lie = min)
+  mboControl = setMBOControlTermination(mboControl, iters = 5)
+  lrn = makeMBOLearner(mboControl, obj.fun, nugget.estim = TRUE)
+  
+  
+  run = mbo(obj.fun, design = des, learner = lrn, control = mboControl, show.info = TRUE)
+  
+  print(run$opt.path)
+  print(as.data.frame(run$opt.path))
+  
+  #autoplot(obj.fun, render.levels = TRUE) + geom_text(data = as.data.frame(res$opt.path), mapping = aes(label = dob), color = "white")
   
   parallelStop()
   
@@ -184,6 +223,11 @@ optimCostFunction <- function(theta) {
   
   return(res)
   #return(mahalanobisDist(target_statistics))  
+}
+
+optimCostFunctionWrapper <- function(...) {
+  theta <- c(...)
+  return(optimCostFunction(theta))
 }
 
 parallelOptimCostFunction <- function(theta) {
