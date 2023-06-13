@@ -32,45 +32,14 @@ tergm.EGMME.bayesOpt <- function(theta0, nw, model, model.mon, control, proposal
                                    stats=c(numeric(global.model$etamap$etalength), global.model.mon$nw.stats - global.model.mon$target.stats))
   global.current_best_dist <<- Inf
   
-  #Rprof()
-  
-  parallelRegisterLevels(levels = "objective")
-  parallelStart("multicore", 4, level="custom.objective")
-  
-  obj.fun <- makeSingleObjectiveFunction(
-    name = "optimCostFunction",
-    fn = parallelOptimCostFunction,
-    par.set = makeParamSet(
-      #makeNumericVectorParam("theta", len = length(theta0), lower = -10, upper = 10)
-      makeNumericParam("theta1", lower=-6, upper=-4),
-      makeNumericParam("theta2", lower=1, upper=3)
-    ),
-    minimize = TRUE,
-    noisy = TRUE
-  )
-  
-  des = generateDesign(n = 5, par.set = getParamSet(obj.fun), fun = lhs::randomLHS)
-  
-  des$y = apply(des, 1, obj.fun)
-  
-  mboControl = makeMBOControl()
-  mboControl = setMBOControlTermination(mboControl, iters = 5)
-  #mboControl = setMBOControlInfill(mboControl, crit = makeMBOInfillCritAEI(aei.use.nugget = TRUE))
-  mboControl = setMBOControlInfill(mboControl, crit = makeMBOInfillCritEI())
-  lrn = makeMBOLearner(mboControl, obj.fun, nugget.estim = TRUE)
+
+  run <- runWithMultipleSamplesOfObjective()
+  #run <- runPlain()
   
   
-  run = mbo(obj.fun, design = des, learner = lrn, control = mboControl, show.info = TRUE)
+  #autoplot(obj.fun, render.levels = TRUE, show.optimum = TRUE) + geom_text(data = as.data.frame(res$opt.path), mapping = aes(label = dob), color = "white")
+  #plot(run)
   
-  parallelStop()
-  
-  #Rprof()
-  
-  #print(run)
-  
-  plot(run)
-  
-  # remove later?
   print(run)
   
   newnetwork <- as.network(
@@ -100,6 +69,71 @@ tergm.EGMME.bayesOpt <- function(theta0, nw, model, model.mon, control, proposal
   
 }
 
+
+runPlain <- function() {
+  obj.fun <- makeSingleObjectiveFunction(
+    name = "optimCostFunction",
+    fn = optimCostFunction,
+    par.set = makeParamSet(
+      #makeNumericVectorParam("theta", len = length(theta0), lower = -10, upper = 10)
+      makeNumericParam("theta1", lower=-6, upper=-4),
+      makeNumericParam("theta2", lower=1, upper=3)
+    ),
+    minimize = TRUE,
+    noisy = TRUE
+  )
+  
+  des = generateDesign(n = 3, par.set = getParamSet(obj.fun), fun = lhs::randomLHS)
+  
+  des$y = apply(des, 1, obj.fun)
+  
+  mboControl = makeMBOControl()
+  mboControl = setMBOControlTermination(mboControl, iters = 1)
+  #mboControl = setMBOControlInfill(mboControl, crit = makeMBOInfillCritAEI(aei.use.nugget = TRUE))
+  mboControl = setMBOControlInfill(mboControl, crit = makeMBOInfillCritEI())
+  lrn = makeMBOLearner(mboControl, obj.fun, nugget.estim = TRUE)
+  
+  run = mbo(obj.fun, design = des, learner = lrn, control = mboControl, show.info = TRUE)
+  
+  return(run)
+  
+}
+
+runWithMultipleSamplesOfObjective <- function() {
+  parallelRegisterLevels(levels = "objective")
+  parallelStart("multicore", 4, level="custom.objective")
+  
+  obj.fun <- makeSingleObjectiveFunction(
+    name = "optimCostFunction",
+    fn = parallelOptimCostFunction,
+    par.set = makeParamSet(
+      #makeNumericVectorParam("theta", len = length(theta0), lower = -10, upper = 10)
+      makeNumericParam("theta1", lower=-6, upper=-4),
+      makeNumericParam("theta2", lower=1, upper=3)
+    ),
+    minimize = TRUE,
+    noisy = TRUE
+  )
+  
+  des = generateDesign(n = 3, par.set = getParamSet(obj.fun), fun = lhs::randomLHS)
+  
+  des$y = apply(des, 1, obj.fun)
+  
+  mboControl = makeMBOControl()
+  mboControl = setMBOControlTermination(mboControl, iters = 1)
+  #mboControl = setMBOControlInfill(mboControl, crit = makeMBOInfillCritAEI(aei.use.nugget = TRUE))
+  mboControl = setMBOControlInfill(mboControl, crit = makeMBOInfillCritEI())
+  lrn = makeMBOLearner(mboControl, obj.fun, nugget.estim = TRUE)
+  
+  
+  run = mbo(obj.fun, design = des, learner = lrn, control = mboControl, show.info = TRUE)
+  
+  parallelStop()
+  
+  return(run)
+}
+
+
 mahalanobisDist <- function(target_statistics) {
   
   cov_matrix <- cov(target_statistics)
@@ -108,16 +142,9 @@ mahalanobisDist <- function(target_statistics) {
   if (rcond(cov_matrix) < .Machine$double.eps) {
     return(10^13)
   }
-  
-  #cond <<- rcond(cov_matrix)
-  
-  # debugging
-  #cov <<- cov_matrix
 
   inv_cov_matrix <- solve(cov_matrix)
   
-  # debugging
-  #inv <<- inv_cov_matrix
   
   #dist <- sqrt(mahalanobis(colMeans(target_statistics), rep(0, ncol(target_statistics)), inv_cov_matrix))
   #dist <- log(mahalanobis(colMeans(target_statistics), rep(0, ncol(target_statistics)), inv_cov_matrix))
