@@ -1,6 +1,7 @@
 
 tergm.EGMME.customOpt <- function(theta0, nw, model, model.mon, control, proposal, verbose=FALSE){
   
+
   # this is where we combine models and pad out eta 
   # with 0s as necessary to accommodate the monitoring model
   model.comb <- c(model, model.mon)
@@ -47,6 +48,7 @@ tergm.EGMME.customOpt <- function(theta0, nw, model, model.mon, control, proposa
   
   merged_target_stats <- cbind(target_stats, cross_target_stats)
 
+  # # Plot the target stats against their index
   # # Set the layout for the grid
   # n_plots <- ncol(merged_target_stats)
   # layout(matrix(1:n_plots, nrow = 2, byrow = TRUE))
@@ -75,16 +77,18 @@ tergm.EGMME.customOpt <- function(theta0, nw, model, model.mon, control, proposa
 
   target_stats_GPs <- fitGauProcToTargetStats(merged_target_stats, sampled_thetas)
 
-  predictObjective(target_stats_GPs, theta_bounds, num_target_stats)
-
+  objective_fn <- predictObjective(target_stats_GPs, theta_bounds, num_target_stats)
+  #next_theta <- findNextThetaToSample(objective_fn)
+  
+  # Plot the target stats with their GP approximation
   # This is all just plot output for debugging
   n_plots <- ncol(merged_target_stats)
   layout(matrix(1:n_plots, nrow = 2, byrow = TRUE))
 
   for (i in 1:ncol(merged_target_stats)) {
     gp <- target_stats_GPs[[i]]
-    grid <- seq(-6, -4, by = 0.01)
-    ytest <- kernlab::predict(gp, grid)
+    grid <- seq(-6, -3, by = 0.01)
+    ytest <- gprPredict(train=gp, inputNew=grid)$pred.mean
     par(mar = c(4, 4, 2, 1))
     plot(grid, ytest, type = "l", ylim = range(ytest, merged_target_stats[, i]),
          xlab = "Grid", ylab = "Values", col = "red")
@@ -96,7 +100,6 @@ tergm.EGMME.customOpt <- function(theta0, nw, model, model.mon, control, proposa
 
   layout(1)
   
-  
   return(NULL)
 }
 
@@ -104,21 +107,25 @@ tergm.EGMME.customOpt <- function(theta0, nw, model, model.mon, control, proposa
 fitGauProcToTargetStats <- function(target_stats, sampled_thetas) {
   models <- list()
   for (i in 1:ncol(target_stats)) {
-    gp <- gausspr(sampled_thetas, target_stats[,i], var=1, kernel=) # I think uses RBF kernel by default
+    gp <- list(gpr(target_stats[,i], sampled_thetas)) #kernel="" I think uses RBF kernel by default
     models <- append(models, gp)
   }
   return(models)
 }
 
+# work in progress
+findNextThetaToSample <- function(objective_fn) {
+  gp <- gpr(objective_fn[,-ncol(objective_fn)], objective_fn[,ncol(objective_fn)]) #kernel="" I think uses RBF kernel by default
+  prediction <- kernlab::predict(gp, -4)
+  print(prediction)
+}
 
 predictObjective <- function(target_stats_GPs, theta_bounds, num_target_stats) {
-  theta_grid <- create_even_grid(100, theta_bounds)
-  
-  print(theta_grid)
+  theta_grid <- create_even_grid(20, theta_bounds)
   
   target_stats_predictions <- NULL
   for (i in 1:length(target_stats_GPs)) {
-    target_stats_predictions <- cbind(target_stats_predictions, kernlab::predict(target_stats_GPs[[i]], theta_grid))
+    target_stats_predictions <- cbind(target_stats_predictions, gprPredict(train=target_stats_GPs[[i]], inputNew=theta_grid)$pred.mean)
   }
   print(target_stats_predictions)
   
@@ -135,16 +142,18 @@ predictObjective <- function(target_stats_GPs, theta_bounds, num_target_stats) {
       min_distance <- mahalanobisDist(cov_matrix, target_stats_predictions[i, 1:num_target_stats])
       min_distance_theta <- theta_grid[i]
       
-      print("New Min:")
-      print(min_distance)
-      print(min_distance_theta)
+      # print("New Min:")
+      # print(min_distance)
+      # print(min_distance_theta)
     }
     
   }
 
-  print(distances)
+  # print(distances)
   plot(theta_grid, distances)
   lines(theta_grid, distances, type='l', col='blue')
+  
+  return(cbind(theta_grid, distances))
 }
 
 # Requires expected value of: first moment, second moment and cross moments
