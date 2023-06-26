@@ -11,7 +11,7 @@ tergm.EGMME.customOpt <- function(theta0, nw, model, model.mon, control, proposa
   
   #theta_bounds <- list(c(-6, -4), c(1,3))
   theta_bounds <- list(c(-6, -3))
-  points_per_dim <- 5
+  points_per_dim <- 20
   theta_values_to_sample <- create_even_grid(points_per_dim, theta_bounds)
 
   current_ergm_state <- ergm_state(nw, model=model.comb, proposal=proposal,
@@ -23,16 +23,9 @@ tergm.EGMME.customOpt <- function(theta0, nw, model, model.mon, control, proposa
   # where 1,2,3 are the columns of target_stats
   cross_target_stats <- numeric()
   
-  # can remove this in the future
-  sampled_thetas <- numeric()
-  
-  # How do I get this before hand?
-  num_target_stats <- 3
-  
   for (i in 1:nrow(theta_values_to_sample)) {
     print("done")
     theta <- theta_values_to_sample[i,]
-    sampled_thetas <- c(sampled_thetas, theta)
 
     eta <- ergm.eta(theta, model$etamap)
     eta.comb <- c(eta, numeric(model.mon$etamap$etalength))
@@ -42,9 +35,11 @@ tergm.EGMME.customOpt <- function(theta0, nw, model, model.mon, control, proposa
     cross_target_stats <- c(cross_target_stats, getCrossTargetStatistics(z$statsmatrix))
   }
   
-  sampled_thetas <- matrix(sampled_thetas, ncol=length(theta0), byrow=TRUE) # check byrow
+
   target_stats <- matrix(target_stats, nrow=points_per_dim^length(theta0), byrow=TRUE)
   cross_target_stats <- matrix(cross_target_stats, nrow=points_per_dim^length(theta0), byrow=TRUE)
+  
+  num_target_stats <- ncol(target_stats)
   
   merged_target_stats <- cbind(target_stats, cross_target_stats)
 
@@ -70,15 +65,15 @@ tergm.EGMME.customOpt <- function(theta0, nw, model, model.mon, control, proposa
   
   
   print("THETAS")
-  print(sampled_thetas)
+  print(theta_values_to_sample)
 
   print("TARGET STATS, CROSS TARGET STATS")
   print(merged_target_stats)
 
-  target_stats_GPs <- fitGauProcToTargetStats(merged_target_stats, sampled_thetas)
+  target_stats_GPs <- fitGauProcToTargetStats(merged_target_stats, theta_values_to_sample)
 
   objective_fn <- predictObjective(target_stats_GPs, theta_bounds, num_target_stats)
-  next_theta <- findNextThetaToSample(objective_fn)
+  next_theta <- findNextThetaToSample(objective_fn, theta_bounds)
   
   # Plot the target stats with their GP approximation
   # This is all just plot output for debugging
@@ -92,8 +87,8 @@ tergm.EGMME.customOpt <- function(theta0, nw, model, model.mon, control, proposa
     par(mar = c(4, 4, 2, 1))
     plot(grid, ytest, type = "l", ylim = range(ytest, merged_target_stats[, i]),
          xlab = "Grid", ylab = "Values", col = "red")
-    lines(sampled_thetas, merged_target_stats[, i], type = 'l', col = 'blue')
-    lines(sampled_thetas, merged_target_stats[, i], type = 'p', col = 'blue')
+    lines(theta_values_to_sample, merged_target_stats[, i], type = 'l', col = 'blue')
+    lines(theta_values_to_sample, merged_target_stats[, i], type = 'p', col = 'blue')
 
     title(main = paste("Plot", i))
   }
@@ -115,20 +110,56 @@ fitGauProcToTargetStats <- function(target_stats, sampled_thetas) {
 
 # work in progress
 # plot the GP at some point to ensure its right
-findNextThetaToSample <- function(objective_fn) {
-  gp <- gpr(objective_fn[,ncol(objective_fn)], objective_fn[,-ncol(objective_fn)]) #kernel="" I think uses RBF kernel by default
+findNextThetaToSample <- function(objective_fn, theta_bounds) {
+  # Squish the objective
+  # Need to do this as otherwise the GP for the objective isn't accurate (needs to inverse a matrix and makes floating point errors)
+  #shift <- abs(min(objective_fn[,ncol(objective_fn)])) + 1
+  #objective_fn[,ncol(objective_fn)] <- log(objective_fn[,ncol(objective_fn)] + shift)
+  
+  objective_gp <- gpr(objective_fn[,ncol(objective_fn)], objective_fn[,-ncol(objective_fn)]) #kernel="" I think uses RBF kernel by default
   ybest <- min(objective_fn[,ncol(objective_fn)])
-  # loop over grid of thetas and find best expected improvement
+  possible_thetas <- create_even_grid(1000, theta_bounds)
+
+  best_theta <- NULL
+  max_improvement <- -Inf
+  all_ei <- numeric()
+  for (i in 1:nrow(possible_thetas)) {
+    current_theta <- possible_thetas[i,]
+    prediction <- gprPredict(train=objective_gp, inputNew=current_theta)
+    ei <- expectedImprovement(prediction$pred.mean, prediction$pred.sd, ybest)
+    if (ei > max_improvement) {
+      max_improvement <- ei
+      best_theta <- current_theta
+    }
+    all_ei <- c(all_ei, ei)
+  }
+  gprPredict(train=objective_gp, inputNew=possible_thetas)
+  # Plot the GP
+  plot(possible_thetas, gprPredict(train=objective_gp, inputNew=possible_thetas)$pred.mean, type='l', col='black', ylab="GP Prediction for Objective")
+  # Plot the EI
+  plot(possible_thetas, all_ei, type='l', col='blue', ylab="Expected Improvement")
+  print("CHOSEN")
+  print(max_improvement)
+  print(best_theta)
+  return(best_theta)
 }
 
 # For minimization
 expectedImprovement <- function(mu, sigma, ybest) {
+  print(mu)
+  print(sigma)
+  print(ybest)
+  # Assuming NaN is 0 but need to check this because a point against itself
+  # should still have uncertainty
+  if (is.na(sigma)) {
+    return(0)
+  }
   if (sigma == 0) {
     return(0)
   }
-  gamma <- (y_best - mu) / sigma
+  gamma <- (ybest - mu) / sigma
   phi <- pnorm(gamma)
-  return(s * (gamma * phi + dnorm(gamma)))
+  return(sigma * (gamma * phi + dnorm(gamma)))
 }
 
 
