@@ -11,7 +11,7 @@ tergm.EGMME.customOpt <- function(theta0, nw, model, model.mon, control, proposa
   
   #theta_bounds <- list(c(-6, -4), c(1,3))
   theta_bounds <- list(c(-6, -3))
-  points_per_dim <- 20
+  points_per_dim <- 5
   theta_values_to_sample <- create_even_grid(points_per_dim, theta_bounds)
 
   current_ergm_state <- ergm_state(nw, model=model.comb, proposal=proposal,
@@ -78,7 +78,7 @@ tergm.EGMME.customOpt <- function(theta0, nw, model, model.mon, control, proposa
   target_stats_GPs <- fitGauProcToTargetStats(merged_target_stats, sampled_thetas)
 
   objective_fn <- predictObjective(target_stats_GPs, theta_bounds, num_target_stats)
-  #next_theta <- findNextThetaToSample(objective_fn)
+  next_theta <- findNextThetaToSample(objective_fn)
   
   # Plot the target stats with their GP approximation
   # This is all just plot output for debugging
@@ -114,11 +114,23 @@ fitGauProcToTargetStats <- function(target_stats, sampled_thetas) {
 }
 
 # work in progress
+# plot the GP at some point to ensure its right
 findNextThetaToSample <- function(objective_fn) {
-  gp <- gpr(objective_fn[,-ncol(objective_fn)], objective_fn[,ncol(objective_fn)]) #kernel="" I think uses RBF kernel by default
-  prediction <- kernlab::predict(gp, -4)
-  print(prediction)
+  gp <- gpr(objective_fn[,ncol(objective_fn)], objective_fn[,-ncol(objective_fn)]) #kernel="" I think uses RBF kernel by default
+  ybest <- min(objective_fn[,ncol(objective_fn)])
+  # loop over grid of thetas and find best expected improvement
 }
+
+# For minimization
+expectedImprovement <- function(mu, sigma, ybest) {
+  if (sigma == 0) {
+    return(0)
+  }
+  gamma <- (y_best - mu) / sigma
+  phi <- pnorm(gamma)
+  return(s * (gamma * phi + dnorm(gamma)))
+}
+
 
 predictObjective <- function(target_stats_GPs, theta_bounds, num_target_stats) {
   theta_grid <- create_even_grid(20, theta_bounds)
