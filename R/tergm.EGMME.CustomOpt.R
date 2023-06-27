@@ -92,7 +92,7 @@ generateInitialTargetStatSample <- function(theta_values_to_sample, points_per_d
   target_stats <- vector("list", nrow(theta_values_to_sample))
   
   target_stats <- foreach(i = 1:nrow(theta_values_to_sample), .combine = "rbind") %dopar% {
-    set.seed
+    set.seed(1)
     theta <- theta_values_to_sample[i,]
     eta <- ergm.eta(theta, model$etamap)
     eta.comb <- c(eta, numeric(model.mon$etamap$etalength))
