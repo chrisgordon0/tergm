@@ -17,31 +17,10 @@ tergm.EGMME.customOpt <- function(theta0, nw, model, model.mon, control, proposa
   current_ergm_state <- ergm_state(nw, model=model.comb, proposal=proposal,
                                   stats=c(numeric(model$etamap$etalength), model.mon$nw.stats - model.mon$target.stats))
   
-  target_stats <- numeric()
-  # Note: cross_target_stats has columns in order
-  # 1x1, 1x2, 1x3, 2x1, 2x2, 2x3, etc
-  # where 1,2,3 are the columns of target_stats
-  cross_target_stats <- numeric()
+  # Figure out how to get this earlier
+  num_target_stats <- 3
   
-  for (i in 1:nrow(theta_values_to_sample)) {
-    print("done")
-    theta <- theta_values_to_sample[i,]
-
-    eta <- ergm.eta(theta, model$etamap)
-    eta.comb <- c(eta, numeric(model.mon$etamap$etalength))
-    z <- tergm_MCMC_slave(current_ergm_state, eta.comb, control, verbose)
-
-    target_stats <- c(target_stats, colMeans(z$statsmatrix))
-    cross_target_stats <- c(cross_target_stats, getCrossTargetStatistics(z$statsmatrix))
-  }
-  
-
-  target_stats <- matrix(target_stats, nrow=points_per_dim^length(theta0), byrow=TRUE)
-  cross_target_stats <- matrix(cross_target_stats, nrow=points_per_dim^length(theta0), byrow=TRUE)
-  
-  num_target_stats <- ncol(target_stats)
-  
-  merged_target_stats <- cbind(target_stats, cross_target_stats)
+  merged_target_stats <- generateInitialTargetStatSample(theta_values_to_sample, points_per_dim, theta0, model, model.mon, current_ergm_state, control, verbose)
 
   # # Plot the target stats against their index
   # # Set the layout for the grid
@@ -99,6 +78,36 @@ tergm.EGMME.customOpt <- function(theta0, nw, model, model.mon, control, proposa
 }
 
 
+# Note: cross_target_stats has columns in order
+# 1x1, 1x2, 1x3, 2x1, 2x2, 2x3, etc
+# where 1,2,3 are the columns of target_stats
+# Merged Target Stats is like
+# 1, 2, 3, 1x1, 1x2, 1x3, 2x1, 2x2, 2x3, etc
+generateInitialTargetStatSample <- function(theta_values_to_sample, points_per_dim, theta0, model, model.mon, current_ergm_state, control, verbose) {
+  num_cores <- 4
+  cl <- makeCluster(num_cores, outfile="")
+  clusterExport(cl=cl, c("getCrossTargetStatistics"))
+  registerDoParallel(cl)
+
+  target_stats <- vector("list", nrow(theta_values_to_sample))
+  
+  target_stats <- foreach(i = 1:nrow(theta_values_to_sample), .combine = "rbind") %dopar% {
+    set.seed
+    theta <- theta_values_to_sample[i,]
+    eta <- ergm.eta(theta, model$etamap)
+    eta.comb <- c(eta, numeric(model.mon$etamap$etalength))
+    z <- tergm_MCMC_slave(current_ergm_state, eta.comb, control, verbose)
+    output <- c(colMeans(z$statsmatrix), getCrossTargetStatistics(z$statsmatrix))
+    output <- matrix(output, nrow=1)
+    return(output)
+  }
+  print(target_stats)
+  stopCluster(cl)
+  registerDoSEQ()
+
+  return(target_stats)
+}
+
 fitGauProcToTargetStats <- function(target_stats, sampled_thetas) {
   models <- list()
   for (i in 1:ncol(target_stats)) {
@@ -115,6 +124,7 @@ findNextThetaToSample <- function(objective_fn, theta_bounds) {
   # Need to do this as otherwise the GP for the objective isn't accurate (needs to inverse a matrix and makes floating point errors)
   #shift <- abs(min(objective_fn[,ncol(objective_fn)])) + 1
   #objective_fn[,ncol(objective_fn)] <- log(objective_fn[,ncol(objective_fn)] + shift)
+  objective_fn[,ncol(objective_fn)] <- matrix(scale(objective_fn[,ncol(objective_fn)]), ncol=1)
   
   objective_gp <- gpr(objective_fn[,ncol(objective_fn)], objective_fn[,-ncol(objective_fn)]) #kernel="" I think uses RBF kernel by default
   ybest <- min(objective_fn[,ncol(objective_fn)])
@@ -135,7 +145,7 @@ findNextThetaToSample <- function(objective_fn, theta_bounds) {
   }
   gprPredict(train=objective_gp, inputNew=possible_thetas)
   # Plot the GP
-  plot(possible_thetas, gprPredict(train=objective_gp, inputNew=possible_thetas)$pred.mean, type='l', col='black', ylab="GP Prediction for Objective")
+  plot(possible_thetas, gprPredict(train=objective_gp, inputNew=possible_thetas)$pred.mean, type='l', col='black', ylab="GP Prediction for Objective (normalized objective)")
   # Plot the EI
   plot(possible_thetas, all_ei, type='l', col='blue', ylab="Expected Improvement")
   print("CHOSEN")
@@ -146,14 +156,14 @@ findNextThetaToSample <- function(objective_fn, theta_bounds) {
 
 # For minimization
 expectedImprovement <- function(mu, sigma, ybest) {
-  print(mu)
-  print(sigma)
-  print(ybest)
+  #print(mu)
+  #print(sigma)
+  #print(ybest)
   # Assuming NaN is 0 but need to check this because a point against itself
   # should still have uncertainty
-  if (is.na(sigma)) {
-    return(0)
-  }
+  #if (is.na(sigma)) {
+  #  return(0)
+  #}
   if (sigma == 0) {
     return(0)
   }
