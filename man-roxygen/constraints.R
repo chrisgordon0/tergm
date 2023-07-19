@@ -5,13 +5,13 @@
 #  open source, and has the attribution requirements (GPL Section 7) at
 #  https://statnet.org/attribution .
 #
-#  Copyright 2008-2022 Statnet Commons
+#  Copyright 2008-2023 Statnet Commons
 ################################################################################
 #' @param constraints A formula specifying one or more constraints
 #' on the support of the distribution of the networks being modeled. Multiple constraints
 #' may be given, separated by \dQuote{+} and \dQuote{-} operators. See
 #' [`ergmConstraint`] for the detailed explanation of
-#' their semantics and also for an indexed list of the constraints visible to the \CRANpkg{ergm} package.
+#' their semantics and also for an indexed list of the constraints visible to the \pkg{ergm} package.
 #'
 #' The default is to have no constraints except those provided through
 #' the [`ergmlhs`] API.

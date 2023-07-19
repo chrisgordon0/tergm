@@ -5,7 +5,7 @@
 #  open source, and has the attribution requirements (GPL Section 7) at
 #  https://statnet.org/attribution .
 #
-#  Copyright 2008-2022 Statnet Commons
+#  Copyright 2008-2023 Statnet Commons
 ################################################################################
 
 stopifnot_dynamic <- function(nw, ..., dynamic=FALSE, .netseries.OK=FALSE){
@@ -29,7 +29,15 @@ stopifnot_dynamic <- function(nw, ..., dynamic=FALSE, .netseries.OK=FALSE){
 #'   old-style `formation` model.
 #'
 #' @usage
-#' # binary: Form(formula, lm=~1, subset=TRUE, weights=1, contrasts=NULL, offset=0, label=NULL)
+#' # binary: Form(
+#' #           formula,
+#' #           lm = ~1,
+#' #           subset = TRUE,
+#' #           weights = 1,
+#' #           contrasts = NULL,
+#' #           offset = 0,
+#' #           label = NULL
+#' #         )
 #' @template ergmTerm-formula
 #'
 #' @template ergmTerm-general
@@ -85,7 +93,15 @@ InitErgmTerm..union.lt.net<-function(nw, arglist, ...) {
 #'   signs of the coefficients are negated.
 #'
 #' @usage
-#' # binary: Persist(formula, lm=~1, subset=TRUE, weights=1, contrasts=NULL, offset=0, label=NULL)
+#' # binary: Persist(
+#' #           formula,
+#' #           lm = ~1,
+#' #           subset = TRUE,
+#' #           weights = 1,
+#' #           contrasts = NULL,
+#' #           offset = 0,
+#' #           label = NULL
+#' #         )
 #' @template ergmTerm-formula
 #'
 #' @template ergmTerm-general
@@ -145,7 +161,15 @@ ergm_rename_terms <- function(model, namewrap){
 #'   coefficient for `Diss()` operator means more dissolution.
 #'
 #' @usage
-#' # binary: Diss(formula, lm=~1, subset=TRUE, weights=1, contrasts=NULL, offset=0, label=NULL)
+#' # binary: Diss(
+#' #           formula,
+#' #           lm = ~1,
+#' #           subset = TRUE,
+#' #           weights = 1,
+#' #           contrasts = NULL,
+#' #           offset = 0,
+#' #           label = NULL
+#' #         )
 #' @template ergmTerm-formula
 #'
 #' @template ergmTerm-general
@@ -194,7 +218,15 @@ InitErgmTerm..intersect.lt.net<-function(nw, arglist, ...) {
 #'   by taking the dyads that have changed between time steps.
 #'
 #' @usage
-#' # binary: Change(formula, lm=~1, subset=TRUE, weights=1, contrasts=NULL, offset=0, label=NULL)
+#' # binary: Change(
+#' #           formula,
+#' #           lm = ~1,
+#' #           subset = TRUE,
+#' #           weights = 1,
+#' #           contrasts = NULL,
+#' #           offset = 0,
+#' #           label = NULL
+#' #         )
 #' @template ergmTerm-formula
 #'
 #' @template ergmTerm-general
