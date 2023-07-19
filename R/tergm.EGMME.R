@@ -158,13 +158,16 @@ tergm.EGMME <- function(formula, constraints, offset.coef,
   
   # I believe `Cout` contains the result from the Gradient Descent
   Cout <- switch(control$EGMME.main.method,
-                 "Gradient-Descent" = tergm.EGMME.BayesOpt(coef(initialfit),
+                 "Gradient-Descent" = tergm.EGMME.customOpt(coef(initialfit),
                    nw, model, model.mon,
                    control=control, proposal=proposal,
                   verbose),
                  stop("Method ", control$EGMME.main.method, " is not implemented.")
                 )
-
+  
+  #return(Cout)
+  
+  
 #' @importFrom utils getS3method
   out <- c(Cout,
            list(network = nw,

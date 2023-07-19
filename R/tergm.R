@@ -179,6 +179,7 @@ tergm <- function(formula, constraints = ~., estimate, times=NULL, offset.coef=N
   out$call <- tergm_call
   out$formula <- formula
   out$estimate <- estimate
+  #out$dist <- switch(estimate,
   out$estimate.desc <- switch(estimate,
                               CMPLE = ,
                               CMLE = sub("Maximum Pseudolikelihood", "Conditional Maximum Pseudolikelihood", sub("Maximum Likelihood", "Conditional Maximum Likelihood", out$estimate.desc)),
