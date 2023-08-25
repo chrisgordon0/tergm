@@ -16,8 +16,8 @@ tergm.EGMME.bayesOpt <- function(theta0, nw, model, model.mon, control, proposal
   control$collect <- TRUE
   control$changes <- FALSE
   
-  control$time.burnin <- 20
-  control$time.interval <- 20
+  control$time.burnin <- 200
+  control$time.interval <- 10
   control$time.samplesize <- 200
   
   # Must assign globals here, and after the optimization I should clean them up
@@ -31,23 +31,63 @@ tergm.EGMME.bayesOpt <- function(theta0, nw, model, model.mon, control, proposal
   global.current_ergm_state <<- ergm_state(nw, model=model.comb, proposal=proposal,
                                    stats=c(numeric(global.model$etamap$etalength), global.model.mon$nw.stats - global.model.mon$target.stats))
   global.current_best_dist <<- Inf
+
+
+  # parallelRegisterLevels(levels = "objective")
+  # parallelStart("multicore", 4, show.info = TRUE)
+  # 
+  # obj.fun <- makeSingleObjectiveFunction(
+  #   name = "optimCostFunction",
+  #   fn = optimCostFunction,
+  #   par.set = makeParamSet(
+  #     makeNumericParam("theta1", lower=-10, upper=10),
+  #     makeNumericParam("theta2", lower=-10, upper=10)
+  #   ),
+  #   minimize = TRUE,
+  #   noisy = TRUE
+  # )
+  # 
+  # des = generateDesign(n = 1000, par.set = getParamSet(obj.fun), fun = lhs::randomLHS)
+  # des$y = parallelMap(optimCostFunctionWrapper, des[,1], des[,2], simplify = TRUE)
+  # parallelStop()
+  # 
+  # write.csv(des, "2dObjFunction.csv", row.names = FALSE)
+  # 
+  # return()
+  
+  
+  print(optimCostFunction(c(-4.16, 3.03)))
+  return()
+  
   
   #1
   #run <- runWithMultipleSamplesDesignMultipleAcquisition()
   #2
-  run <- runWithMuleipleSamplesOfAcquisitionParallelDesign()
+  #run <- runWithMuleipleSamplesOfAcquisitionParallelDesign()
   
   
   #run <- runWithMultipleSamplesOfObjective()
   #run <- runPlain()
   
-  print(run$opt.path)
-  print(as.data.frame(run$opt.path))
+  #print(run$opt.path)
+  #print(as.data.frame(run$opt.path))
+  
+  csv_files <- list.files("/Users/chris/Documents/uni_work/tergm_data/2d/2dBayesOpt/AEI/25/matern3_2")
+  max_number <- 0
+  if (length(csv_files) != 0) {
+    numbers <- as.numeric(gsub("AEI-(\\d+)\\.csv", "\\1", csv_files))
+    max_number <- max(numbers, na.rm = TRUE)
+  }
+  new_filename <- paste0("/Users/chris/Documents/uni_work/tergm_data/2d/2dBayesOpt/AEI/25/matern3_2/AEI-", max_number + 1, ".csv")
+  write.csv(as.data.frame(run$opt.path), file=new_filename, row.names=FALSE)
+
+  return()
+  
   
   #write.csv(as.data.frame(run$opt.path), "opt_path_big_test.csv", row.names=FALSE)
   
+  plot(run)
   #autoplot(obj.fun, render.levels = TRUE, show.optimum = TRUE) + geom_text(data = as.data.frame(res$opt.path), mapping = aes(label = dob), color = "white")
-  #plot(run)
   
   print(run)
   return()
@@ -80,27 +120,31 @@ tergm.EGMME.bayesOpt <- function(theta0, nw, model, model.mon, control, proposal
 
 
 runPlain <- function() {
+  parallelRegisterLevels(levels = "objective")
+  parallelStart("multicore", 4, show.info = TRUE)
+  
   obj.fun <- makeSingleObjectiveFunction(
     name = "optimCostFunction",
     fn = optimCostFunction,
     par.set = makeParamSet(
-      #makeNumericVectorParam("theta", len = length(theta0), lower = -10, upper = 10)
-      makeNumericParam("theta1", lower=-6, upper=-4),
-      makeNumericParam("theta2", lower=1, upper=3)
+      makeNumericParam("theta1", lower=-10, upper=10),
+      makeNumericParam("theta2", lower=-10, upper=10)
     ),
     minimize = TRUE,
     noisy = TRUE
   )
   
-  des = generateDesign(n = 5, par.set = getParamSet(obj.fun), fun = lhs::randomLHS)
-  
-  des$y = apply(des, 1, obj.fun)
+  des = generateDesign(n = 25, par.set = getParamSet(obj.fun), fun = lhs::randomLHS)
+  des$y = parallelMap(optimCostFunctionWrapper, des[,1], des[,2], simplify = TRUE)
+  parallelStop()
   
   mboControl = makeMBOControl()
-  mboControl = setMBOControlTermination(mboControl, iters = 1)
-  #mboControl = setMBOControlInfill(mboControl, crit = makeMBOInfillCritAEI(aei.use.nugget = TRUE))
-  mboControl = setMBOControlInfill(mboControl, crit = makeMBOInfillCritEI())
-  lrn = makeMBOLearner(mboControl, obj.fun, nugget.estim = TRUE)
+  mboControl = setMBOControlTermination(mboControl, iters = 25)
+  mboControl = setMBOControlInfill(mboControl, crit = makeMBOInfillCritAEI(aei.use.nugget = TRUE))
+  #mboControl = setMBOControlInfill(mboControl, crit = makeMBOInfillCritEI())
+  
+  #lrn = makeMBOLearner(mboControl, obj.fun, nugget.estim = TRUE)
+  lrn = makeLearner("regr.km", predict.type = "se", covtype = "matern3_2", nugget.estim = TRUE)  
   
   run = mbo(obj.fun, design = des, learner = lrn, control = mboControl, show.info = TRUE)
   
@@ -150,22 +194,24 @@ runWithMuleipleSamplesOfAcquisitionParallelDesign <- function() {
     fn = optimCostFunction,
     par.set = makeParamSet(
       makeNumericParam("theta1", lower=-10, upper=10),
-      makeNumericParam("theta2", lower=1, upper=3)
+      makeNumericParam("theta2", lower=-10, upper=10)
     ),
     minimize = TRUE,
     noisy = TRUE
   )
   
-  des = generateDesign(n = 50, par.set = getParamSet(obj.fun), fun = lhs::randomLHS)
+  des = generateDesign(n = 20, par.set = getParamSet(obj.fun), fun = lhs::randomLHS)
   des$y = parallelMap(optimCostFunctionWrapper, des[,1], des[,2], simplify = TRUE)
   #des$y = parallelMap(optimCostFunctionWrapper, des[,1], simplify = TRUE)
   
   
   mboControl = makeMBOControl(propose.points = 4)
-  mboControl = setMBOControlMultiPoint(mboControl, method = "cl", cl.lie = min)
+  mboControl = setMBOControlMultiPoint(mboControl, method = "cl", cl.lie = max)
+  #mboControl = setMBOControlMultiPoint(mboControl, method = "cb")
+  
   mboControl = setMBOControlTermination(mboControl, iters = 5)
   lrn = makeMBOLearner(mboControl, obj.fun, nugget.estim = TRUE)
-  
+  #lrn = makeLearner("regr.km", predict.type = "se", covtype = "matern3_2", nugget.estim = TRUE)
   run = mbo(obj.fun, design = des, learner = lrn, control = mboControl, show.info = TRUE)
   
   parallelStop()
@@ -208,9 +254,10 @@ mahalanobisDist1 <- function(target_statistics) {
   
   cov_matrix <- cov(target_statistics)
   cov_out <<- cov_matrix
+
   # check for singular matrix
   if (rcond(cov_matrix) < .Machine$double.eps) {
-    return(10^13)
+    return(10^10)
   }
 
   inv_cov_matrix <- solve(cov_matrix)
@@ -219,6 +266,9 @@ mahalanobisDist1 <- function(target_statistics) {
   #dist <- sqrt(mahalanobis(colMeans(target_statistics), rep(0, ncol(target_statistics)), inv_cov_matrix))
   #dist <- log(mahalanobis(colMeans(target_statistics), rep(0, ncol(target_statistics)), inv_cov_matrix))
   dist <- mahalanobis(colMeans(target_statistics), rep(0, ncol(target_statistics)), inv_cov_matrix)
+  if (dist <= 0) {
+    return(10^4)
+  }
   return(dist)
 }
 
@@ -233,24 +283,24 @@ optimCostFunction <- function(theta) {
 
   z <- tergm_MCMC_slave(global.current_ergm_state, eta.comb, global.control, global.verbose)
   
-  target_statistics <- z$statsmatrix[,-(1:2)]
-
+  target_statistics <- z$statsmatrix[,-seq_len(nparam(global.model, canonical = TRUE))]
+  print(target_statistics)
   # optional to change ergm state every time
   # global.current_ergm_state <<- z$state
   
   res <- mahalanobisDist1(target_statistics)
   
-  if (global.current_best_dist > res) {
-    global.current_best_dist <<- res
-    global.current_ergm_state <<- z$state
-  }
+  # if (global.current_best_dist > res) {
+  #   global.current_best_dist <<- res
+  #   global.current_ergm_state <<- z$state
+  # }
   
 
   #targets <<- target_statistics
   
   # For debugging
   # mahalanob <<- mahalanobisDist(target_statistics)
-  
+  #return(log(1+res))
   return(res)
   #return(mahalanobisDist(target_statistics))  
 }

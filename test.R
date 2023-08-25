@@ -15,11 +15,12 @@ library(foreach)
 library(doParallel)
 library(parallelMap)
 library(GPFDA)
+library(threejs)
+library(statnet.common)
 
 load_all()
 
-
-simple_test <- function() {
+simple_test <- function(seed) {
   n<-20
   do.plot <- FALSE
   g0<-network.initialize(n,dir=FALSE)
@@ -36,13 +37,19 @@ simple_test <- function() {
                       target.stats[2])
   
   # Get a deliberately bad starting network.
-  set.seed(3)
+  
+  set.seed(seed)
+  
   g1<-san(g0~meandeg,target.stats=target.stats[1],verbose=TRUE)
   
   # Fit the model with very poor starting values.
-  set.seed(4)
+  
+  #set.seed(2)
+  
   #dynfit<-tergm(g1 ~ Form(~edges), targets=~edges+mean.age, estimate="EGMME",target.stats=target.stats[-3], constraints=~., verbose=FALSE, control=control.tergm(SA.plot.progress=do.plot,SA.phase2.levels.min=2, SA.phase2.levels.max=4, SA.phase2.repeats = 10, SA.restart.on.err=FALSE,init=c(-log(.95/.05))))
-  dynfit<-tergm(g1 ~ Form(~edges) + Persist(~edges), targets=~edges+mean.age, estimate="EGMME",target.stats=target.stats[-3], constraints=~., verbose=FALSE,control=control.tergm(SA.plot.progress=do.plot,SA.phase2.levels.min=2, SA.phase2.levels.max=4, SA.phase2.repeats = 10, SA.restart.on.err=FALSE,init=c(-log(.95/.05), 1)))
+  #dynfit<-tergm(g1 ~ Form(~edges) + Persist(~edges), targets=~edges+mean.age, estimate="EGMME",target.stats=target.stats[-3], constraints=~., verbose=FALSE,control=control.tergm(SA.plot.progress=do.plot,SA.phase2.levels.min=2, SA.phase2.levels.max=4, SA.phase2.repeats = 10, SA.restart.on.err=FALSE,init=c(-log(.95/.05), 1)))
+  dynfit<-tergm(g1 ~ Form(~edges) + Persist(~edges), targets=~edges+mean.age, estimate="EGMME",target.stats=c(1000000,1000000), constraints=~., verbose=FALSE,control=control.tergm(SA.plot.progress=do.plot,SA.phase2.levels.min=2, SA.phase2.levels.max=4, SA.phase2.repeats = 10, SA.restart.on.err=FALSE,init=c(-log(.95/.05), 1)))
+  
   #print(dynfit)
   #return(dynfit[1])
   
@@ -51,16 +58,66 @@ simple_test <- function() {
   
   #expect_equal(unlist(truth),coef(dynfit),tolerance=0.05,ignore_attr=TRUE)
 }
-start_time <- Sys.time()
-simple_test()
-end_time <- Sys.time()
+simple_test(1)
 
-print("TOTAL EXECUTION TIME:")
-print(end_time - start_time)
+times <- numeric()
+
+for (i in 1:5) {
+  start_time <- Sys.time()
+  simple_test(i)
+  end_time <- Sys.time()
+  
+  times <- c(times, end_time - start_time)
+}
+print(times)
+
+library(plotly)
+#optpath <- read.csv('optpath.csv')
+#optpath <- read.csv('/Users/chris/Documents/uni_work/tergm_data/EI-bayesOpt-200-10-200-50d-50iter.csv')
+optpath <- read.csv('2dObjFunction.csv')
+data <- data.frame(x=optpath$theta1, y=optpath$theta2, z=optpath$y)
+#filtered_data <- data[data$z <= 1000, ]
+filtered_data <- data
+plot_ly(filtered_data, z=~log(1+z), y=~y, x=~x, type = "contour")
+
+library(threejs)
+scatterplot3js(M, size=0.1, color=col, bg="black", pch=".")
+
+
+library(ggplot2)
+optpath <- read.csv('/Users/chris/Documents/uni_work/tergm_data/EI-bayesOpt-200-10-200-50d-50iter.csv')
+ggplot(optpath, aes(x=seq(1,length(y)),y=y)) + 
+  geom_line() + 
+  xlab("iteration") + 
+  ylab("Mahalanobis Distance") +
+  ggtitle("Mahalanobis Distance of target statistic over time")
+
+ggplot(optpath, aes(x=seq(1,length(y)),y=y)) + 
+  geom_point() + 
+  xlab("iteration") + 
+  ylab("Mahalanobis Distance") +
+  ggtitle("Mahalanobis Distance of target statistic over time, zoomed in") + 
+  ylim(0,1000)
+
+
+distances <- numeric()
+for (i in 1:nrow(optpath)) {
+  distances <- c(distances, sqrt((optpath[i,'theta1'] - (-5.202))^2 + (optpath[i,'theta2']-2.211)^2))
+}
+distances <- data.frame(dist=distances)
+print(distances)
+
+ggplot(distances, aes(x=seq(1,nrow(distances)), y=dist)) + 
+  geom_line() + 
+  xlab("iteration") + 
+  ylab("Euclidian Distance") + 
+  ggtitle("Distance of each parameter configuration to the correct one")# + 
+  #geom_line(data=optpath, mapping=aes(x=seq(1,length(y)),y=y))
+
+
+
 
 # I think I want from -6 to 0 and from 0 to 6 
-
-
 plot_objective <- function () {
   # Create a grid of theta1 and theta2 values
   theta1 <- seq(-6, 0, 0.1)
@@ -152,6 +209,10 @@ plotOptPath <- function() {
   abline(v=40, col='red')
   lines(lowess(x, log(optPath$y)))
 }
+
+
+
+
 #plotOptPath()
 # start_time <- Sys.time()
 # simple_test()
