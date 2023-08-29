@@ -7,12 +7,14 @@ tergm.EGMME.customOpt <- function(theta0, nw, model, model.mon, control, proposa
   
   control <- set_control_options(control)
   
+  # Note theta0 is (-2.9444,1.000)
+  
   #theta_bounds <- list(c(-10, 10), c(-10, 10))
-  theta_bounds <- list(c(-6, -4), c(1, 3))
-  #theta_bounds <- list(c(-10,0), c(0,10))
+  #theta_bounds <- list(c(-6, -4), c(1, 3))
+  theta_bounds <- list(c(-10,0), c(0,10))
   #theta_bounds <- list(c(-5,-4))
   
-  points_per_dim <- 5
+  points_per_dim <- 10
   
   theta_values_to_sample <- create_even_grid(points_per_dim, theta_bounds)
   current_ergm_state <- ergm_state(nw, model=model.comb, proposal=proposal,
@@ -21,8 +23,8 @@ tergm.EGMME.customOpt <- function(theta0, nw, model, model.mon, control, proposa
   num_target_stats <- 2 # (I think this is nparam(model, canonical = TRUE))
   
   # fit_normal(theta_values_to_sample, points_per_dim, model, model.mon, current_ergm_state, control, verbose, num_target_stats, theta_bounds)
-  # fit_track_covariance(theta_values_to_sample, points_per_dim, model, model.mon, current_ergm_state, control, verbose, num_target_stats, theta_bounds)
-  fit_not_mean_beforehand(theta_values_to_sample, points_per_dim, model, model.mon, current_ergm_state, control, verbose, num_target_stats, theta_bounds)
+  fit_track_covariance(theta_values_to_sample, points_per_dim, model, model.mon, current_ergm_state, control, verbose, num_target_stats, theta_bounds)
+  # fit_not_mean_beforehand(theta_values_to_sample, points_per_dim, model, model.mon, current_ergm_state, control, verbose, num_target_stats, theta_bounds)
   
 
   
@@ -75,6 +77,7 @@ fit_not_mean_beforehand <- function(theta_values_to_sample, points_per_dim, mode
   
   target_stats_GPs <- fitGauProcToTargetStats(merged_target_stats, theta_values_to_sample)
   obj <- predictObjective(target_stats_GPs, theta_bounds, num_target_stats)
+  print(obj)
   return()
 }
 
@@ -118,8 +121,11 @@ generateInitialTargetStatSample_trackCovariance <- function(theta_values_to_samp
     
     statsmatrix <- z$statsmatrix[,-seq_len(nparam(model, canonical = TRUE))]
     
-    variances <- c(mean(statsmatrix[,1]^2) - mean(statsmatrix[,1])^2, mean(statsmatrix[,2]^2) - mean(statsmatrix[,2])^2)
-    covariances <- c(mean(statsmatrix[,1]*statsmatrix[,2])-mean(statsmatrix[,1])*mean(statsmatrix[,2]), mean(statsmatrix[,2]*statsmatrix[,1])-mean(statsmatrix[,2])*mean(statsmatrix[,1]))
+    variances <- c(mean(statsmatrix[,1]^2) - mean(statsmatrix[,1])^2, 
+                   mean(statsmatrix[,2]^2) - mean(statsmatrix[,2])^2)
+    
+    covariances <- c(mean(statsmatrix[,1]*statsmatrix[,2])-mean(statsmatrix[,1])*mean(statsmatrix[,2]),
+                     mean(statsmatrix[,2]*statsmatrix[,1])-mean(statsmatrix[,2])*mean(statsmatrix[,1]))
     
     output <- c(colMeans(statsmatrix), variances, covariances)
     output <- matrix(output, nrow=1)
@@ -239,7 +245,7 @@ fitMultiGauProcToTargetStats <- function(target_stats, sampled_thetas) {
 }
 
  predictObjective_trackCovariance <- function(target_stats_GPs, theta_bounds, num_target_stats) {
-  theta_grid <- create_even_grid(5, theta_bounds)
+  theta_grid <- create_even_grid(10, theta_bounds)
 
   target_stats_predictions <- NULL
   for (i in 1:length(target_stats_GPs)) {
@@ -283,7 +289,7 @@ fitMultiGauProcToTargetStats <- function(target_stats, sampled_thetas) {
 }
 
 predictObjective <- function(target_stats_GPs, theta_bounds, num_target_stats) {
-  theta_grid <- create_even_grid(4, theta_bounds)
+  theta_grid <- create_even_grid(7, theta_bounds)
   #print(theta_grid)
   
   target_stats_predictions <- NULL
@@ -321,22 +327,22 @@ predictObjective <- function(target_stats_GPs, theta_bounds, num_target_stats) {
     
   }
   # print("ALL DISTANCES")
-  chosen_dist <- Inf
-  chosen_theta_row <- -1
-  for (i in 1:nrow(theta_grid)) {
-    if (chosen_dist > distances[i] && distances[i] >= 0) {
-      chosen_dist <- distances[i]
-      chosen_theta_row <- i
-    }
-    print(theta_grid[i,])
-    print(distances[i])
-  }
-  print("CHOSEN MIN")
-  print(chosen_dist)
-  print(theta_grid[chosen_theta_row,])
-  print(min(distances))
-
-  print(distances)
+  # chosen_dist <- Inf
+  # chosen_theta_row <- -1
+  # for (i in 1:nrow(theta_grid)) {
+  #   if (chosen_dist > distances[i] && distances[i] >= 0) {
+  #     chosen_dist <- distances[i]
+  #     chosen_theta_row <- i
+  #   }
+  #   print(theta_grid[i,])
+  #   print(distances[i])
+  # }
+  # print("CHOSEN MIN")
+  # print(chosen_dist)
+  # print(theta_grid[chosen_theta_row,])
+  # print(min(distances))
+  # 
+  # print(distances)
   # plot(theta_grid[1:300], distances[1:300])
   # lines(theta_grid, distances, type='l', col='blue')
   # 
@@ -357,11 +363,11 @@ mahalanobisDist <- function(cov_matrix, target_statistics) {
   
   # check for singular matrix
   if (rcond(cov_matrix) < .Machine$double.eps) {
-    return(10^3)
+    return(10^10)
   }
   
   inv_cov_matrix <- solve(cov_matrix)
-  dist <- mahalanobis(target_statistics, rep(0, length(target_statistics)), inv_cov_matrix)
+  dist <- mahalanobis(target_statistics, rep(0, length(target_statistics)), inv_cov_matrix, inverted=TRUE)
   return(dist)
 }
 

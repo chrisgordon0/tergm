@@ -20,6 +20,8 @@ library(statnet.common)
 
 load_all()
 
+#debug(tergm:::optimCostFunction)
+
 simple_test <- function(seed) {
   n<-20
   do.plot <- FALSE
@@ -47,8 +49,8 @@ simple_test <- function(seed) {
   #set.seed(2)
   
   #dynfit<-tergm(g1 ~ Form(~edges), targets=~edges+mean.age, estimate="EGMME",target.stats=target.stats[-3], constraints=~., verbose=FALSE, control=control.tergm(SA.plot.progress=do.plot,SA.phase2.levels.min=2, SA.phase2.levels.max=4, SA.phase2.repeats = 10, SA.restart.on.err=FALSE,init=c(-log(.95/.05))))
-  #dynfit<-tergm(g1 ~ Form(~edges) + Persist(~edges), targets=~edges+mean.age, estimate="EGMME",target.stats=target.stats[-3], constraints=~., verbose=FALSE,control=control.tergm(SA.plot.progress=do.plot,SA.phase2.levels.min=2, SA.phase2.levels.max=4, SA.phase2.repeats = 10, SA.restart.on.err=FALSE,init=c(-log(.95/.05), 1)))
-  dynfit<-tergm(g1 ~ Form(~edges) + Persist(~edges), targets=~edges+mean.age, estimate="EGMME",target.stats=c(1000000,1000000), constraints=~., verbose=FALSE,control=control.tergm(SA.plot.progress=do.plot,SA.phase2.levels.min=2, SA.phase2.levels.max=4, SA.phase2.repeats = 10, SA.restart.on.err=FALSE,init=c(-log(.95/.05), 1)))
+  dynfit<-tergm(g1 ~ Form(~edges) + Persist(~edges), targets=~edges+mean.age, estimate="EGMME",target.stats=target.stats[-3], constraints=~., verbose=FALSE,control=control.tergm(SA.plot.progress=do.plot,SA.phase2.levels.min=2, SA.phase2.levels.max=4, SA.phase2.repeats = 10, SA.restart.on.err=FALSE,init=c(-log(.95/.05), 1)))
+  #dynfit<-tergm(g1 ~ Form(~edges) + Persist(~edges), targets=~edges+mean.age, estimate="EGMME",target.stats=c(1000000,1000000), constraints=~., verbose=FALSE,control=control.tergm(SA.plot.progress=do.plot,SA.phase2.levels.min=2, SA.phase2.levels.max=4, SA.phase2.repeats = 10, SA.restart.on.err=FALSE,init=c(-log(.95/.05), 1)))
   
   #print(dynfit)
   #return(dynfit[1])
@@ -58,7 +60,11 @@ simple_test <- function(seed) {
   
   #expect_equal(unlist(truth),coef(dynfit),tolerance=0.05,ignore_attr=TRUE)
 }
-simple_test(1)
+start_time <- Sys.time()
+simple_test(6)
+end_time <- Sys.time()
+print(end_time-start_time)
+
 
 times <- numeric()
 
@@ -70,6 +76,8 @@ for (i in 1:5) {
   times <- c(times, end_time - start_time)
 }
 print(times)
+print("AVG:")
+print(sum(times)/5)
 
 library(plotly)
 #optpath <- read.csv('optpath.csv')
