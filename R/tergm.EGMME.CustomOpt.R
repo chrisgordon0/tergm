@@ -112,7 +112,7 @@ generateInitialTargetStatSample_trackCovariance <- function(theta_values_to_samp
   
   target_stats <- foreach(i = 1:nrow(theta_values_to_sample), .combine = "rbind",
                           .packages=c("ergm", "statnet.common", "tergm")) %dopar% {
-    set.seed(1)
+                            
     theta <- theta_values_to_sample[i,]
     eta <- ergm::ergm.eta(theta, model$etamap)
     eta.comb <- c(eta, numeric(model.mon$etamap$etalength))
@@ -244,7 +244,7 @@ fitMultiGauProcToTargetStats <- function(target_stats, sampled_thetas) {
   #print(target_stats)
 }
 
- predictObjective_trackCovariance <- function(target_stats_GPs, theta_bounds, num_target_stats) {
+predictObjective_trackCovariance <- function(target_stats_GPs, theta_bounds, num_target_stats) {
   theta_grid <- create_even_grid(10, theta_bounds)
 
   target_stats_predictions <- NULL
@@ -368,6 +368,7 @@ mahalanobisDist <- function(cov_matrix, target_statistics) {
   
   inv_cov_matrix <- solve(cov_matrix)
   dist <- mahalanobis(target_statistics, rep(0, length(target_statistics)), inv_cov_matrix, inverted=TRUE)
+  
   return(dist)
 }
 

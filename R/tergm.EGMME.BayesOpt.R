@@ -32,54 +32,61 @@ tergm.EGMME.bayesOpt <- function(theta0, nw, model, model.mon, control, proposal
                                    stats=c(numeric(global.model$etamap$etalength), global.model.mon$nw.stats - global.model.mon$target.stats))
   global.current_best_dist <<- Inf
 
-
-  # parallelRegisterLevels(levels = "objective")
-  # parallelStart("multicore", 4, show.info = TRUE)
-  # 
-  # obj.fun <- makeSingleObjectiveFunction(
-  #   name = "optimCostFunction",
-  #   fn = optimCostFunction,
-  #   par.set = makeParamSet(
-  #     makeNumericParam("theta1", lower=-10, upper=10),
-  #     makeNumericParam("theta2", lower=-10, upper=10)
-  #   ),
-  #   minimize = TRUE,
-  #   noisy = TRUE
-  # )
-  # 
-  # des = generateDesign(n = 1000, par.set = getParamSet(obj.fun), fun = lhs::randomLHS)
-  # des$y = parallelMap(optimCostFunctionWrapper, des[,1], des[,2], simplify = TRUE)
-  # parallelStop()
-  # 
-  # write.csv(des, "2dObjFunction.csv", row.names = FALSE)
-  # 
-  # return()
   
-  #print(optimCostFunction(c(-0.9, 5.1)))
+  path <- "/Users/chris/Documents/uni_work/tergm_data/2d/2dBayesOptMore/"
+  methods <- c("EI", "AEI", "UCB", "CL")
+  seed <- 0
+  times <- list(ei = numeric(), aei=numeric(), ucb=numeric(), cl=numeric())
+  for(method in methods) {
+    current_path <- paste0(path, method, "/")
+    
+    for (i in 1:2) {
+      print("ITERATION")
+      print(i)
+      set.seed(seed)
+      run <- NULL
+      
+      if(method == "EI") {
+        start_time <- Sys.time()
+        run <- runEI()
+        times[["ei"]] <- c(times[["ei"]], Sys.time()-start_time)
+      }
+      else if (method == "AEI") {
+        run <- runAEI()
+        times[["aei"]] <- c(times[["aei"]], Sys.time()-start_time)
+      }
+      else if (method == "UCB") {
+        run <- runUCB()
+        times[["ucb"]] <- c(times[["ucb"]], Sys.time()-start_time)
+      }
+      else {
+        run <- runCL()
+        times[["cl"]] <- c(times[["cl"]], Sys.time()-start_time)
+      }
+      path <- paste0(current_path, method, "-", as.character(i), ".csv")
+      write.csv(as.data.frame(run$opt.path), file=path, row.names=FALSE)
+      
+      seed <- seed + 1
+    }
+  }
+  print(times)
+  return()
+  
+  #run <- runPlain()
   #return()
   
-  
-  #1
-  #run <- runWithMultipleSamplesDesignMultipleAcquisition()
-  #2
-  #run <- runWithMuleipleSamplesOfAcquisitionParallelDesign()
-  
-  
-  #run <- runWithMultipleSamplesOfObjective()
-  run <- runPlain()
-  #run <- runWithMuleipleSamplesOfAcquisitionParallelDesign()1
-  
+
   #print(run)
   #print(run$opt.path)
   #print(as.data.frame(run$opt.path))
   
-  csv_files <- list.files("/Users/chris/Documents/uni_work/tergm_data/2d/2dBayesOptFixed/EI/25/sqrt/")
+  csv_files <- list.files("/Users/chris/Documents/uni_work/tergm_data/2d/2dBayesOptFixed/CL/6x4/matern3_2+log/")
   max_number <- 0
   if (length(csv_files) != 0) {
-    numbers <- as.numeric(gsub("EI-(\\d+)\\.csv", "\\1", csv_files))
+    numbers <- as.numeric(gsub("CL-(\\d+)\\.csv", "\\1", csv_files))
     max_number <- max(numbers, na.rm = TRUE)
   }
-  new_filename <- paste0("/Users/chris/Documents/uni_work/tergm_data/2d/2dBayesOptFixed/EI/25/sqrt/EI-", max_number + 1, ".csv")
+  new_filename <- paste0("/Users/chris/Documents/uni_work/tergm_data/2d/2dBayesOptFixed/CL/6x4/matern3_2+log/CL-", max_number + 1, ".csv")
   write.csv(as.data.frame(run$opt.path), file=new_filename, row.names=FALSE)
 
   return()
@@ -119,8 +126,72 @@ tergm.EGMME.bayesOpt <- function(theta0, nw, model, model.mon, control, proposal
   
 }
 
+runEI <- function() {
+  parallelRegisterLevels(levels = "objective")
+  parallelStart("multicore", 4, show.info = TRUE)
+  
+  obj.fun <- makeSingleObjectiveFunction(
+    name = "optimCostFunction",
+    fn = optimCostFunction,
+    par.set = makeParamSet(
+      makeNumericParam("theta1", lower=-10, upper=10),
+      makeNumericParam("theta2", lower=-10, upper=10)
+    ),
+    minimize = TRUE,
+    noisy = TRUE
+  )
+  
+  des = generateDesign(n = 25, par.set = getParamSet(obj.fun), fun = lhs::randomLHS)
+  des$y = parallelMap(optimCostFunctionWrapper, des[,1], des[,2], simplify = TRUE)
+  
+  parallelStop()
+  
+  mboControl = makeMBOControl()
+  mboControl = setMBOControlTermination(mboControl, iters = 25)
+  mboControl = setMBOControlInfill(mboControl, crit = makeMBOInfillCritEI())
 
-runPlain <- function() {
+  lrn = makeMBOLearner(mboControl, obj.fun, nugget.estim = TRUE)
+  lrn = makeLearner("regr.km", predict.type = "se", nugget.estim = TRUE)  
+  
+  run = mbo(obj.fun, design = des, learner = lrn, control = mboControl, show.info = TRUE)
+  parallelStop()
+  
+  return(run)
+}
+
+runAEI <- function() {
+  parallelRegisterLevels(levels = "objective")
+  parallelStart("multicore", 4, show.info = TRUE)
+  
+  obj.fun <- makeSingleObjectiveFunction(
+    name = "optimCostFunction",
+    fn = optimCostFunction,
+    par.set = makeParamSet(
+      makeNumericParam("theta1", lower=-10, upper=10),
+      makeNumericParam("theta2", lower=-10, upper=10)
+    ),
+    minimize = TRUE,
+    noisy = TRUE
+  )
+  
+  des = generateDesign(n = 25, par.set = getParamSet(obj.fun), fun = lhs::randomLHS)
+  des$y = parallelMap(optimCostFunctionWrapper, des[,1], des[,2], simplify = TRUE)
+  
+  parallelStop()
+  
+  mboControl = makeMBOControl()
+  mboControl = setMBOControlTermination(mboControl, iters = 25)
+  mboControl = setMBOControlInfill(mboControl, crit = makeMBOInfillCritAEI())
+  
+  lrn = makeMBOLearner(mboControl, obj.fun, nugget.estim = TRUE)
+  lrn = makeLearner("regr.km", predict.type = "se", nugget.estim = TRUE)  
+  
+  run = mbo(obj.fun, design = des, learner = lrn, control = mboControl, show.info = TRUE)
+
+  return(run)
+}
+
+runUCB <- function() {
   parallelRegisterLevels(levels = "objective")
   parallelStart("multicore", 4, show.info = TRUE)
   
@@ -141,14 +212,83 @@ runPlain <- function() {
   
   mboControl = makeMBOControl()
   mboControl = setMBOControlTermination(mboControl, iters = 25)
+  mboControl = setMBOControlInfill(mboControl, crit = makeMBOInfillCritCB())
+  
+  lrn = makeMBOLearner(mboControl, obj.fun, nugget.estim = TRUE)
+  lrn = makeLearner("regr.km", predict.type = "se", nugget.estim = TRUE)  
+  
+  run = mbo(obj.fun, design = des, learner = lrn, control = mboControl, show.info = TRUE)
+  
+  return(run)
+}
+
+runCL <- function() {
+  parallelRegisterLevels(levels = "objective")
+  parallelStart("multicore", 4, show.info = TRUE)
+  
+  obj.fun <- makeSingleObjectiveFunction(
+    name = "optimCostFunction",
+    fn = optimCostFunction,
+    par.set = makeParamSet(
+      makeNumericParam("theta1", lower=-10, upper=10),
+      makeNumericParam("theta2", lower=-10, upper=10)
+    ),
+    minimize = TRUE,
+    noisy = TRUE
+  )
+  
+  des = generateDesign(n = 25, par.set = getParamSet(obj.fun), fun = lhs::randomLHS)
+  des$y = parallelMap(optimCostFunctionWrapper, des[,1], des[,2], simplify = TRUE)
+  
+  mboControl = makeMBOControl(propose.points = 4)
+  mboControl = setMBOControlMultiPoint(mboControl, method = "cl", cl.lie=min)
+  mboControl = setMBOControlTermination(mboControl, iters = 6)
+  
+  lrn = makeMBOLearner(mboControl, obj.fun, nugget.estim = TRUE)
+  lrn = makeLearner("regr.km", predict.type = "se", nugget.estim = TRUE)  
+  
+  run = mbo(obj.fun, design = des, learner = lrn, control = mboControl, show.info = TRUE)
+  parallelStop()
+  
+  return(run)
+  
+}
+
+
+runPlain <- function() {
+  parallelRegisterLevels(levels = "objective")
+  parallelStart("multicore", 4, show.info = TRUE)
+  
+  obj.fun <- makeSingleObjectiveFunction(
+    name = "optimCostFunction",
+    fn = optimCostFunction,
+    par.set = makeParamSet(
+      makeNumericParam("theta1", lower=-10, upper=10),
+      makeNumericParam("theta2", lower=-10, upper=10)
+    ),
+    minimize = TRUE,
+    noisy = TRUE
+  )
+  
+  des = generateDesign(n = 25, par.set = getParamSet(obj.fun), fun = lhs::randomLHS)
+  des$y = parallelMap(optimCostFunctionWrapper, des[,1], des[,2], simplify = TRUE)
+  
+  #mboControl = makeMBOControl()
+  #mboControl = setMBOControlTermination(mboControl, iters = 25)
+  
+  mboControl = makeMBOControl(propose.points = 4)
+  mboControl = setMBOControlMultiPoint(mboControl, method = "cl", cl.lie=min)
+  mboControl = setMBOControlTermination(mboControl, iters = 6)
+  
   #mboControl = setMBOControlInfill(mboControl, crit = makeMBOInfillCritAEI(aei.use.nugget = TRUE))
-  mboControl = setMBOControlInfill(mboControl, crit = makeMBOInfillCritEI())
+  #mboControl = setMBOControlInfill(mboControl, crit = makeMBOInfillCritEI())
   #mboControl = setMBOControlInfill(mboControl, crit = makeMBOInfillCritCB())
   
   lrn = makeMBOLearner(mboControl, obj.fun, nugget.estim = TRUE)
-  #lrn = makeLearner("regr.km", predict.type = "se", covtype = "matern3_2", nugget.estim = TRUE)  
+  lrn = makeLearner("regr.km", predict.type = "se", covtype = "matern3_2", nugget.estim = TRUE)  
   
   run = mbo(obj.fun, design = des, learner = lrn, control = mboControl, show.info = TRUE)
+  parallelStop()
   
   return(run)
   
@@ -265,8 +405,8 @@ mahalanobisDist1 <- function(target_statistics) {
   #dist <- sqrt(mahalanobis(colMeans(target_statistics), rep(0, ncol(target_statistics)), inv_cov_matrix))
   #dist <- log(mahalanobis(colMeans(target_statistics), rep(0, ncol(target_statistics)), inv_cov_matrix))
   dist <- mahalanobis(colMeans(target_statistics), rep(0, ncol(target_statistics)), inv_cov_matrix, inverted=TRUE)
-  if (dist <= 0) {
-    return(10^4)
+  if (dist < 0) {
+    return(10^10)
   }
   return(dist)
 }
@@ -283,7 +423,9 @@ optimCostFunction <- function(theta) {
   z <- tergm_MCMC_slave(global.current_ergm_state, eta.comb, global.control, global.verbose)
   
   target_statistics <- z$statsmatrix[,-seq_len(nparam(global.model, canonical = TRUE))]
-
+  #plot(density(target_statistics[,1]))
+  
+  #print(target_statistics)
   # optional to change ergm state every time
   # global.current_ergm_state <<- z$state
   
@@ -300,8 +442,8 @@ optimCostFunction <- function(theta) {
   # For debugging
   # mahalanob <<- mahalanobisDist(target_statistics)
   #return(log(1+res))
-  return(sqrt(1+res))
-  #return(res)
+  #return(sqrt(1+res))
+  return(res)
   #return(mahalanobisDist(target_statistics))  
 }
 
