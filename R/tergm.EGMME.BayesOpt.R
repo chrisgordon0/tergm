@@ -63,8 +63,7 @@ tergm.EGMME.bayesOpt <- function(theta0, nw, model, model.mon, control, proposal
         run <- runCL()
         times[["cl"]] <- c(times[["cl"]], Sys.time()-start_time)
       }
-      path <- paste0(current_path, method, "-", as.character(i), ".csv")
-      write.csv(as.data.frame(run$opt.path), file=path, row.names=FALSE)
+      write.csv(as.data.frame(run$opt.path), file=paste0(current_path, method, "-", as.character(i), ".csv"), row.names=FALSE)
       
       seed <- seed + 1
     }
