@@ -158,7 +158,7 @@ tergm.EGMME <- function(formula, constraints, offset.coef,
   
   # I believe `Cout` contains the result from the Gradient Descent
   Cout <- switch(control$EGMME.main.method,
-                 "Gradient-Descent" = tergm.EGMME.bayesOpt(coef(initialfit),
+                 "Gradient-Descent" = tergm.EGMME.customOptTrackCov(coef(initialfit),
                    nw, model, model.mon,
                    control=control, proposal=proposal,
                   verbose),

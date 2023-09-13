@@ -50,9 +50,12 @@ simple_test <- function(seed) {
   
   #dynfit<-tergm(g1 ~ Form(~edges), targets=~edges+mean.age, estimate="EGMME",target.stats=target.stats[-3], constraints=~., verbose=FALSE, control=control.tergm(SA.plot.progress=do.plot,SA.phase2.levels.min=2, SA.phase2.levels.max=4, SA.phase2.repeats = 10, SA.restart.on.err=FALSE,init=c(-log(.95/.05))))
   dynfit<-tergm(g1 ~ Form(~edges) + Persist(~edges), targets=~edges+mean.age, estimate="EGMME",target.stats=target.stats[-3], constraints=~., verbose=FALSE,control=control.tergm(SA.plot.progress=do.plot,SA.phase2.levels.min=2, SA.phase2.levels.max=4, SA.phase2.repeats = 10, SA.restart.on.err=FALSE,init=c(-log(.95/.05), 1)))
-  #dynfit<-tergm(g1 ~ Form(~edges) + Persist(~edges), targets=~edges+mean.age, estimate="EGMME",target.stats=c(1000000,1000000), constraints=~., verbose=FALSE,control=control.tergm(SA.plot.progress=do.plot,SA.phase2.levels.min=2, SA.phase2.levels.max=4, SA.phase2.repeats = 10, SA.restart.on.err=FALSE,init=c(-log(.95/.05), 1)))
+  #dynfit<-tergm(g1 ~ Form(~edges) + Persist(~edges), targets=~edges+mean.age, estimate="EGMME",target.stats=target.stats[-3], constraints=~., verbose=FALSE,control=control.tergm(SA.plot.progress=do.plot,SA.phase2.levels.min=2, SA.phase2.levels.max=4, SA.phase2.repeats = 10, SA.restart.on.err=FALSE,init=c(-10,-2)))
+  
+ #dynfit<-tergm(g1 ~ Form(~edges) + Persist(~edges), targets=~edges+mean.age, estimate="EGMME",target.stats=c(1000000,1000000), constraints=~., verbose=FALSE,control=control.tergm(SA.plot.progress=do.plot,SA.phase2.levels.min=2, SA.phase2.levels.max=4, SA.phase2.repeats = 10, SA.restart.on.err=FALSE,init=c(-log(.95/.05), 1)))
+  #return()
+  print(dynfit)
   return()
-  #print(dynfit)
   #return(dynfit[1])
   
   #expect_warning(expect_error(print(summary(dynfit)), NA), NA)
@@ -61,7 +64,7 @@ simple_test <- function(seed) {
   #expect_equal(unlist(truth),coef(dynfit),tolerance=0.05,ignore_attr=TRUE)
 }
 start_time <- Sys.time()
-simple_test(6)
+simple_test(5)
 end_time <- Sys.time()
 print(end_time-start_time)
 
