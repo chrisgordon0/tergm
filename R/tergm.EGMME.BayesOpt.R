@@ -18,7 +18,7 @@ tergm.EGMME.bayesOpt <- function(theta0, nw, model, model.mon, control, proposal
   
   control$time.burnin <- 200
   control$time.interval <- 10
-  control$time.samplesize <- 200
+  control$time.samplesize <- 500 ##################################### CHANGE THIS BACK IN THE FUTURE IF I RUN BAYESOPT #####################################
   
   # Must assign globals here, and after the optimization I should clean them up
   # and remove them from the environment.
@@ -32,42 +32,29 @@ tergm.EGMME.bayesOpt <- function(theta0, nw, model, model.mon, control, proposal
                                    stats=c(numeric(global.model$etamap$etalength), global.model.mon$nw.stats - global.model.mon$target.stats))
   global.current_best_dist <<- Inf
   
-  path <- "/Users/chris/Documents/uni_work/tergm_data/2d/2dBayesOptMore/"
-  methods <- c("EI", "AEI", "UCB", "CL")
-  seed <- 0
-  times <- list(ei = numeric(), aei=numeric(), ucb=numeric(), cl=numeric())
-  for(method in methods) {
-    current_path <- paste0(path, method, "/")
-    
-    for (i in 1:2) {
-      print("ITERATION")
-      print(i)
-      set.seed(seed)
-      run <- NULL
-      
-      if(method == "EI") {
-        start_time <- Sys.time()
-        run <- runEI()
-        times[["ei"]] <- c(times[["ei"]], Sys.time()-start_time)
-      }
-      else if (method == "AEI") {
-        run <- runAEI()
-        times[["aei"]] <- c(times[["aei"]], Sys.time()-start_time)
-      }
-      else if (method == "UCB") {
-        run <- runUCB()
-        times[["ucb"]] <- c(times[["ucb"]], Sys.time()-start_time)
-      }
-      else {
-        run <- runCL()
-        times[["cl"]] <- c(times[["cl"]], Sys.time()-start_time)
-      }
-      write.csv(as.data.frame(run$opt.path), file=paste0(current_path, method, "-", as.character(i), ".csv"), row.names=FALSE)
-      
-      seed <- seed + 1
-    }
-  }
-  print(times)
+  
+  parallelRegisterLevels(levels = "objective")
+  parallelStart("multicore", 4, show.info = TRUE)
+  
+  obj.fun <- makeSingleObjectiveFunction(
+    name = "optimCostFunction",
+    fn = optimCostFunction,
+    par.set = makeParamSet(
+      makeNumericParam("theta1", lower=-10, upper=10),
+      makeNumericParam("theta2", lower=-10, upper=10)
+    ),
+    minimize = TRUE,
+    noisy = TRUE
+  )
+  
+  des = generateDesign(n = 10, par.set = getParamSet(obj.fun), fun = lhs::randomLHS)
+  des$y = parallelMap(optimCostFunctionWrapper, des[,1], des[,2], simplify = TRUE)
+  
+  parallelStop()
+  
+  
+  write.csv(des, file='/Users/chris/Documents/uni_work/tergm_data/ObjectiveFunction/objFnDistances.csv', row.names=FALSE)
+
   return()
   
   #run <- runPlain()
