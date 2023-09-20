@@ -31,7 +31,6 @@ tergm.EGMME.bayesOpt <- function(theta0, nw, model, model.mon, control, proposal
   global.current_ergm_state <<- ergm_state(nw, model=model.comb, proposal=proposal,
                                    stats=c(numeric(global.model$etamap$etalength), global.model.mon$nw.stats - global.model.mon$target.stats))
   global.current_best_dist <<- Inf
-
   
   path <- "/Users/chris/Documents/uni_work/tergm_data/2d/2dBayesOptMore/"
   methods <- c("EI", "AEI", "UCB", "CL")

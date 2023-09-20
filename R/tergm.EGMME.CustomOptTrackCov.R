@@ -1,5 +1,17 @@
 tergm.EGMME.customOptTrackCov <- function(theta0, nw, model, model.mon, control, proposal, verbose=FALSE){
+
+  final_thetas <- numeric()
+  final_distances <- numeric()
   
+  for (k in 1:10) {
+  
+  set.seed(k)
+  theta0 <- unname(theta0)
+  theta0 <- c(rnorm(1,-2.94439, sd=3), rnorm(1, 1, sd=3))
+  theta_bounds <- list(c(theta0[1]-1, theta0[1]+1), c(theta0[2]-1, theta0[2]+1))
+  print(theta_bounds)
+  
+
   # this is where we combine models and pad out eta 
   # with 0s as necessary to accommodate the monitoring model
   model.comb <- c(model, model.mon)
@@ -16,9 +28,9 @@ tergm.EGMME.customOptTrackCov <- function(theta0, nw, model, model.mon, control,
   #theta_bounds <- list(c(-6, -2), c(0, 4))
   #theta_bounds <- list(c(-10,0), c(0,10))
   #theta_bounds <- list(c(-4, -2), c(0, 2))
-
-  theta0 <- unname(theta0)
-  theta_bounds <- list(c(theta0[1]-1, theta0[1]+1), c(theta0[2]-1, theta0[2]+1))
+  
+  # theta0 <- unname(theta0)
+  # theta_bounds <- list(c(theta0[1]-1, theta0[1]+1), c(theta0[2]-1, theta0[2]+1))
 
   threshold <- 0.5
   
@@ -29,7 +41,7 @@ tergm.EGMME.customOptTrackCov <- function(theta0, nw, model, model.mon, control,
   thetas <- thetas[rep(1:nrow(thetas), each = 2), ]
   target_stats_GPs <- COTV.fitGauProcToTargetStats(target_stats, thetas)
   cov_matrix_star <- COTV.getCovMatrixFromTargetStats(theta0, model, model.mon, current_ergm_state, control, verbose)
-  obj_fn <- COTV.predictObjective(target_stats_GPs, theta_bounds, 2, cov_matrix_star)
+  obj_fn <- COTV.predictObjectiveWrapper(target_stats_GPs, theta_bounds, 2, cov_matrix_star, search_min=FALSE)
   
   print("Objective Function:")
   print(obj_fn)
@@ -42,9 +54,11 @@ tergm.EGMME.customOptTrackCov <- function(theta0, nw, model, model.mon, control,
   print("Min theta")
   print(min_theta)
   
+  min_theta_history <- obj_fn[which.min(obj_fn[,3]),]
+  
   i <- 0
-  while(i < 25 && min_dist > 0.05) {
-
+  while(i < 6 && min_dist > 0.1) {
+    
     result <- COTV.checkIfThetaCloseToBoundsAndReturnNewBounds(theta_bounds, min_theta, threshold)
     
     theta_bounds <- result$new_bounds_total
@@ -94,7 +108,7 @@ tergm.EGMME.customOptTrackCov <- function(theta0, nw, model, model.mon, control,
     thetas <- rbind(thetas, new_thetas_to_sample)
     
     target_stats_GPs <- COTV.fitGauProcToTargetStats(target_stats, thetas)
-    obj_fn <- COTV.predictObjective(target_stats_GPs, theta_bounds, 2, cov_matrix_star)
+    obj_fn <- COTV.predictObjectiveWrapper(target_stats_GPs, theta_bounds, 2, cov_matrix_star, search_min=FALSE)
     
     print("New Obj Fn")
     print(obj_fn)
@@ -107,8 +121,38 @@ tergm.EGMME.customOptTrackCov <- function(theta0, nw, model, model.mon, control,
     print("Min theta")
     print(min_theta)
     
+    min_theta_history <- rbind(min_theta_history,  obj_fn[which.min(obj_fn[,3]),])
+    
+    print(min_theta_history)
+    
+    if (!(added_bounds_1 || added_bounds_2)) {
+      prev_min_theta <- min_theta_history[nrow(min_theta_history),1:2]
+      theta_dist <- sqrt((min_theta[1]-prev_min_theta[1])^2+(min_theta[2]-prev_min_theta[2])^2)
+      print(theta_dist)
+      if (theta_dist < 0.2) {
+        print("Min dist was too close, searching the next minimum")
+        combinations <- expand.grid(theta_bounds)
+        result <- obj_fn[obj_fn[,1] %in% combinations$Var1 & obj_fn[,2] %in% combinations$Var2, 3]
+        
+        min_index <- which.min(result)
+        min_theta <- c(combinations$Var1[min_index], combinations$Var2[min_index])
+        print("new min theta")
+        print(min_theta)
+      }
+    }
+    
     i <- i+1
   }
+  print("END")
+  print(min_theta)
+  print(min_dist)
+  final_thetas <- append(final_thetas, min_theta)
+  final_distances <- append(final_distances, min_dist)
+  } # end of big for loop
+  
+  print("ALL RESULTS")
+  print(final_thetas)
+  print(final_distances)
   return()
 
 }
@@ -156,15 +200,34 @@ COTV.fitGauProcToTargetStats <- function(target_stats, sampled_thetas) {
   models <- list()
   for (i in 1:ncol(target_stats)) {
     #gp <- list(gpr(target_stats[,i], sampled_thetas, gamma=1.5))
-    gp <- list(gpr(target_stats[,i], sampled_thetas, Cov="matern", nu=3/2))
+    gp <- list(gpr(target_stats[,i], sampled_thetas, Cov="matern", nu=3/2, mean=1))
     models <- append(models, gp)
   }
   return(models)
 }
 
 
-COTV.predictObjective <- function(target_stats_GPs, theta_bounds, n_target_stats, cov_matrix_star) {
-  theta_grid <- COTV.create_even_grid(30, theta_bounds)
+COTV.predictObjectiveWrapper <- function(target_stats_GPs, theta_bounds, n_target_stats, cov_matrix_star, search_min=FALSE) {
+  result <- COTV.predictObjective(40, target_stats_GPs, theta_bounds, n_target_stats, cov_matrix_star)
+  
+  if (!search_min) {
+    return(result)
+  }
+  
+  obj_fn <- result
+  
+  min_theta <- obj_fn[which.min(obj_fn[,3]),1:2]
+  theta_bounds <- list(c(min_theta[1]-0.25, min_theta[1]+0.25), c(min_theta[2]-0.25, min_theta[2]+0.25))
+    
+  result <- COTV.predictObjective(10, target_stats_GPs, theta_bounds, n_target_stats, cov_matrix_star)
+  
+  result <- rbind(obj_fn, result)
+  
+  return(result)
+}
+
+COTV.predictObjective <- function(points_per_dim, target_stats_GPs, theta_bounds, n_target_stats, cov_matrix_star) {
+  theta_grid <- COTV.create_even_grid(points_per_dim, theta_bounds)
   
   # Order: x_1, x_2, v_1, v_2, c_12, c_21 (where c_12 and c_21 should be equal)
   target_stats_predictions <- NULL
@@ -175,7 +238,7 @@ COTV.predictObjective <- function(target_stats_GPs, theta_bounds, n_target_stats
     target_stats_pred_sd <- cbind(target_stats_pred_sd, prediction$pred.sd)
     
   }
-
+  
   
   distances <- numeric()
   variances <- numeric()
@@ -229,7 +292,7 @@ COTV.getVarianceOfDistance <- function(cov_matrix, target_stats_predictions, tar
   diag(cov_matrix_star) <- target_stats_pred_sd[i,]^2
   #print(cov_matrix_star)
   #cov_matrix_star <- diag(target_stats_pred_sd[i,]^2)
-  
+  #print(cov_matrix_star)
   var_dist <- t(grad_dist) %*% cov_matrix_star %*% grad_dist
   return(var_dist)
 }
@@ -343,6 +406,7 @@ COTV.getTargetStatSample <- function(theta_values_to_sample, model, model.mon, c
         mat <- cbind(mat, sample)
       }
     }
+    
     var1 <- (statsmatrix[,1] - mean(statsmatrix[,1]))^2
     mat <- cbind(mat, matrix(c(mean(var1) - sqrt(var(var1)/2), mean(var1) + sqrt(var(var1)/2)), ncol=1, nrow=2))
     
@@ -353,6 +417,10 @@ COTV.getTargetStatSample <- function(theta_values_to_sample, model, model.mon, c
     mat <- cbind(mat, matrix(c(mean(cov1)-sqrt(var(cov1)/2), mean(cov1)+sqrt(var(cov1)/2)), ncol=1, nrow=2))
     mat <- cbind(mat, matrix(c(mean(cov1)-sqrt(var(cov1)/2), mean(cov1)+sqrt(var(cov1)/2)), ncol=1, nrow=2))
     
+    # print(statsmatrix)
+    # print(var(statsmatrix[,1]))
+    # print(mat)
+    # print("---------------------")
     return(mat)
   }
   
