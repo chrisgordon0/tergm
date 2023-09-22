@@ -1,13 +1,17 @@
 tergm.EGMME.customOptTrackCov <- function(theta0, nw, model, model.mon, control, proposal, verbose=FALSE){
 
+  starting_thetas <- numeric()
   final_thetas <- numeric()
   final_distances <- numeric()
   
-  for (k in 1:10) {
+  plot(COTV.create_even_grid(10, list(c(-10,0), c(-3,5))))
+  COTV.create_even_grid(10, list(c(-10,0), c(-3,5)))
+  for (k in 1:30) {
   
   set.seed(k)
   theta0 <- unname(theta0)
   theta0 <- c(rnorm(1,-2.94439, sd=3), rnorm(1, 1, sd=3))
+  starting_thetas <- append(starting_thetas, theta0)
   theta_bounds <- list(c(theta0[1]-1, theta0[1]+1), c(theta0[2]-1, theta0[2]+1))
   print(theta_bounds)
   
@@ -151,8 +155,16 @@ tergm.EGMME.customOptTrackCov <- function(theta0, nw, model, model.mon, control,
   } # end of big for loop
   
   print("ALL RESULTS")
+  print("Starting Thetas")
+  print(starting_thetas)
+  print("Final Thetas")
   print(final_thetas)
+  print("Final Distances")
   print(final_distances)
+  
+  res <- cbind(matrix(starting_thetas, ncol=2, byrow=TRUE), matrix(final_thetas, ncol=2, byrow=TRUE), final_distances)
+  print(res)
+  write.csv(res, file='/Users/chris/Documents/uni_work/tergm_data/customOptResults/results.csv', row.names=FALSE)
   return()
 
 }

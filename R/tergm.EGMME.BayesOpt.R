@@ -32,7 +32,13 @@ tergm.EGMME.bayesOpt <- function(theta0, nw, model, model.mon, control, proposal
                                    stats=c(numeric(global.model$etamap$etalength), global.model.mon$nw.stats - global.model.mon$target.stats))
   global.current_best_dist <<- Inf
   
-  
+  results <- numeric()
+  for (i in 1:10) {
+    results <- append(results, optimCostFunction(c(-2, 1)))
+  }
+  print(results)
+  print(var(results))
+  return()
   parallelRegisterLevels(levels = "objective")
   parallelStart("multicore", 4, show.info = TRUE)
   
