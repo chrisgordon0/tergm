@@ -11,15 +11,16 @@
 tergm.EGMME.GD <- function(theta0, nw, model, model.mon,
                             control, proposal,
                             verbose=FALSE){
-  print("theta0:")
   print(theta0)
+ # print("theta0:")
+  #print(theta0)
   #print("nw")
   #print(nw)
   #print("model")
   #print(model)
   #print(model.mon)
   #print(control)
-  print(proposal)
+  #print(proposal)
   
   ###### Set the constants and convenience variables. ######
   offsets <- model$etamap$offsettheta # which parameters are offsets?

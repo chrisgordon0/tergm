@@ -7,6 +7,8 @@
 
 tergm.EGMME.bayesOpt <- function(theta0, nw, model, model.mon, control, proposal, verbose=FALSE){
 
+  theta0 <- unname(theta0)
+  
   # this is where we combine models and pad out eta 
   # with 0s as necessary to accommodate the monitoring model
   model.comb <- c(model, model.mon)
@@ -16,9 +18,9 @@ tergm.EGMME.bayesOpt <- function(theta0, nw, model, model.mon, control, proposal
   control$collect <- TRUE
   control$changes <- FALSE
   
-  control$time.burnin <- 200
-  control$time.interval <- 10
-  control$time.samplesize <- 500 ##################################### CHANGE THIS BACK IN THE FUTURE IF I RUN BAYESOPT #####################################
+  control$time.burnin <- 1000
+  control$time.interval <- 1
+  control$time.samplesize <- 100 ##################################### CHANGE THIS BACK IN THE FUTURE IF I RUN BAYESOPT #####################################
   
   # Must assign globals here, and after the optimization I should clean them up
   # and remove them from the environment.
@@ -32,55 +34,13 @@ tergm.EGMME.bayesOpt <- function(theta0, nw, model, model.mon, control, proposal
                                    stats=c(numeric(global.model$etamap$etalength), global.model.mon$nw.stats - global.model.mon$target.stats))
   global.current_best_dist <<- Inf
   
-  results <- numeric()
-  for (i in 1:10) {
-    results <- append(results, optimCostFunction(c(-2, 1)))
-  }
-  print(results)
-  print(var(results))
-  return()
-  parallelRegisterLevels(levels = "objective")
-  parallelStart("multicore", 4, show.info = TRUE)
+  #c(-9.02,-0.519,0.205,-0.018,2.65)
   
-  obj.fun <- makeSingleObjectiveFunction(
-    name = "optimCostFunction",
-    fn = optimCostFunction,
-    par.set = makeParamSet(
-      makeNumericParam("theta1", lower=-10, upper=10),
-      makeNumericParam("theta2", lower=-10, upper=10)
-    ),
-    minimize = TRUE,
-    noisy = TRUE
-  )
-  
-  des = generateDesign(n = 10, par.set = getParamSet(obj.fun), fun = lhs::randomLHS)
-  des$y = parallelMap(optimCostFunctionWrapper, des[,1], des[,2], simplify = TRUE)
-  
-  parallelStop()
-  
-  
-  write.csv(des, file='/Users/chris/Documents/uni_work/tergm_data/ObjectiveFunction/objFnDistances.csv', row.names=FALSE)
-
-  return()
-  
-  #run <- runPlain()
-  #return()
-  
-
-  #print(run)
-  #print(run$opt.path)
-  #print(as.data.frame(run$opt.path))
-  
-  csv_files <- list.files("/Users/chris/Documents/uni_work/tergm_data/2d/2dBayesOptFixed/CL/6x4/matern3_2+log/")
-  max_number <- 0
-  if (length(csv_files) != 0) {
-    numbers <- as.numeric(gsub("CL-(\\d+)\\.csv", "\\1", csv_files))
-    max_number <- max(numbers, na.rm = TRUE)
-  }
-  new_filename <- paste0("/Users/chris/Documents/uni_work/tergm_data/2d/2dBayesOptFixed/CL/6x4/matern3_2+log/CL-", max_number + 1, ".csv")
-  write.csv(as.data.frame(run$opt.path), file=new_filename, row.names=FALSE)
-
-  return()
+  # print(optimCostFunction(c(-9.02277864, -0.49926888, 0.26433627, -0.05358635, 2.63859651)))
+  # return()
+  run <- runUCB(theta0)
+  print(run)
+  return(c(run$x))
   
   
   #write.csv(as.data.frame(run$opt.path), "opt_path_big_test.csv", row.names=FALSE)
@@ -125,8 +85,11 @@ runEI <- function() {
     name = "optimCostFunction",
     fn = optimCostFunction,
     par.set = makeParamSet(
-      makeNumericParam("theta1", lower=-10, upper=10),
-      makeNumericParam("theta2", lower=-10, upper=10)
+      makeNumericParam("theta1", lower=-10, upper=8),
+      makeNumericParam("theta2", lower=-1, upper=1),
+      makeNumericParam("theta2", lower=-1, upper=1),
+      makeNumericParam("theta2", lower=-1, upper=1),
+      makeNumericParam("theta2", lower=1, upper=3)
     ),
     minimize = TRUE,
     noisy = TRUE
@@ -182,7 +145,7 @@ runAEI <- function() {
   return(run)
 }
 
-runUCB <- function() {
+runUCB <- function(theta0) {
   parallelRegisterLevels(levels = "objective")
   parallelStart("multicore", 4, show.info = TRUE)
   
@@ -190,15 +153,22 @@ runUCB <- function() {
     name = "optimCostFunction",
     fn = optimCostFunction,
     par.set = makeParamSet(
-      makeNumericParam("theta1", lower=-10, upper=10),
-      makeNumericParam("theta2", lower=-10, upper=10)
+      makeNumericParam("theta1", lower=theta0[1]-2.5, upper=theta0[1]+2.5),
+      makeNumericParam("theta2", lower=theta0[2]-2.5, upper=theta0[2]+2.5),
+      makeNumericParam("theta3", lower=theta0[3]-2.5, upper=theta0[3]+2.5),
+      makeNumericParam("theta4", lower=theta0[4]-2.5, upper=theta0[4]+2.5),
+      makeNumericParam("theta5", lower=theta0[5]-2.5, upper=theta0[5]+2.5)
     ),
     minimize = TRUE,
     noisy = TRUE
   )
-  
+
   des = generateDesign(n = 25, par.set = getParamSet(obj.fun), fun = lhs::randomLHS)
-  des$y = parallelMap(optimCostFunctionWrapper, des[,1], des[,2], simplify = TRUE)
+  print(des)
+  des <- rbind(des, theta0)
+  print(des)
+  des$y = parallelMap(optimCostFunctionWrapper, des[,1], des[,2], des[,3], des[,4], des[,5], simplify = TRUE)
+  print(des)
   parallelStop()
   
   mboControl = makeMBOControl()
@@ -432,9 +402,9 @@ optimCostFunction <- function(theta) {
   
   # For debugging
   # mahalanob <<- mahalanobisDist(target_statistics)
-  #return(log(1+res))
+  return(log(1+res))
   #return(sqrt(1+res))
-  return(res)
+  #return(res)
   #return(mahalanobisDist(target_statistics))  
 }
 

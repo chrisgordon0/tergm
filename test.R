@@ -18,11 +18,32 @@ library(GPFDA)
 library(threejs)
 library(statnet.common)
 
+# theta1 <- rnorm(50, mean=-5.1, sd=3)
+# theta2 <- rnorm(50, mean=2.1, sd=3)
+# plot(theta1, theta2)
+# sample_thetas <- cbind(theta1, theta2)
+# sample_thetas
+# write.csv(sample_thetas, file='/Users/chris/Documents/uni_work/tergm_data/results/thetas.csv', row.names = FALSE)
 load_all()
 
 #debug(tergm:::optimCostFunction)
 
-simple_test <- function(seed) {
+n<-20
+do.plot <- FALSE
+g0<-network.initialize(n,dir=FALSE)
+
+#                    edges, mean.age
+target.stats<-c(     n*1/2,       10)
+
+coef.exact<-function(density,duration)
+  list(form=-log(((1+exp(logit(1-1/duration)))/(density/(1-density)))-1),
+       diss=logit(1-1/duration))
+
+
+truth <- coef.exact(target.stats[1]/network.dyadcount(g0),
+                    target.stats[2])
+
+simple_test <- function(seed, theta1, theta2) {
   n<-20
   do.plot <- FALSE
   g0<-network.initialize(n,dir=FALSE)
@@ -53,11 +74,16 @@ simple_test <- function(seed) {
   #dynfit<-tergm(g1 ~ Form(~edges), targets=~edges+mean.age, estimate="EGMME",target.stats=target.stats[-3], constraints=~., verbose=FALSE, control=control.tergm(SA.plot.progress=do.plot,SA.phase2.levels.min=2, SA.phase2.levels.max=4, SA.phase2.repeats = 10, SA.restart.on.err=FALSE,init=c(-log(.95/.05))))
   #dynfit<-tergm(g1 ~ Form(~edges) + Persist(~edges), targets=~edges+mean.age, estimate="EGMME",target.stats=target.stats[-3], constraints=~., verbose=FALSE,control=control.tergm(SA.plot.progress=do.plot,SA.phase2.levels.min=2, SA.phase2.levels.max=4, SA.phase2.repeats = 10, SA.restart.on.err=FALSE,init=c(-log(.95/.05), 1)))
   dynfit<-tergm(g1 ~ Form(~edges) + Persist(~edges), targets=~edges+mean.age, estimate="EGMME",target.stats=target.stats[-3], constraints=~., verbose=FALSE,control=control.tergm(SA.plot.progress=do.plot,SA.phase2.levels.min=2, SA.phase2.levels.max=4, SA.phase2.repeats = 10, SA.restart.on.err=FALSE,init=c(-5,2)))
+  # print(dynfit[1])
+  # print(dynfit[2])
+  print("---------------------------")
+  #print(coef(dynfit))
+  # print(dynfit[1])
+  print(dynfit[2])
+  return(matrix(c(dynfit[1],dynfit[2]),ncol=2,nrow=1))
+  #return(matrix(coef(dynfit), ncol=2, nrow=1))
+  #print(dynfit[1])
   
- #dynfit<-tergm(g1 ~ Form(~edges) + Persist(~edges), targets=~edges+mean.age, estimate="EGMME",target.stats=c(1000000,1000000), constraints=~., verbose=FALSE,control=control.tergm(SA.plot.progress=do.plot,SA.phase2.levels.min=2, SA.phase2.levels.max=4, SA.phase2.repeats = 10, SA.restart.on.err=FALSE,init=c(-log(.95/.05), 1)))
-  #return()
-  print(dynfit)
-  return()
   #return(dynfit[1])
   
   #expect_warning(expect_error(print(summary(dynfit)), NA), NA)
@@ -66,22 +92,46 @@ simple_test <- function(seed) {
   #expect_equal(unlist(truth),coef(dynfit),tolerance=0.05,ignore_attr=TRUE)
 }
 start_time <- Sys.time()
-simple_test(6)
+simple_test(6, -5, 2)
 end_time <- Sys.time()
 print(end_time-start_time)
 
 times <- numeric()
-
-for (i in 1:5) {
+result_thetas <- NULL
+sample_thetas <- read.csv('/Users/chris/Documents/uni_work/tergm_data/results/thetas.csv')
+for (i in 1:nrow(sample_thetas)) {
+  print("ITERATION")
+  print(i)
+  print(sample_thetas[i,1])
+  print(sample_thetas[i,2])
   start_time <- Sys.time()
-  simple_test(i)
+  result <- tryCatch(
+    {
+      simple_test(i, sample_thetas[i,1], sample_thetas[i,2])
+    },
+    error = function(cond){
+      return(matrix(c(Inf,Inf), ncol=2, nrow=1))
+    }
+                     
+  )
   end_time <- Sys.time()
   
+  if (is.null(result_thetas)) {
+    result_thetas <- result
+  }
+  else {
+    result_thetas <- rbind(result_thetas, result)
+  }
   times <- c(times, end_time - start_time)
+  print("TIME:")
+  print(end_time-start_time)
+  print("RESULT THETAS")
+  print(result_thetas)
 }
-print(times)
-print("AVG:")
-print(sum(times)/5)
+
+res <- cbind(result_thetas, times)
+write.csv(res, file='/Users/chris/Documents/uni_work/tergm_data/results/bayesOpt.csv', row.names=FALSE)
+
 
 library(plotly)
 #optpath <- read.csv('optpath.csv')

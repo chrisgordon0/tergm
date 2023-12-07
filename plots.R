@@ -199,15 +199,15 @@ var(distances)
 ############ Boxplot
 distances <- list()
 
-# files <- c('/Users/chris/Documents/uni_work/tergm_data/2d/2dBayesOptFixed/EI/25/EI-',
-#            '/Users/chris/Documents/uni_work/tergm_data/2d/2dBayesOptFixed/EI/25/log/EI-',
-#            '/Users/chris/Documents/uni_work/tergm_data/2d/2dBayesOptFixed/AEI/25/AEI-',
-#            '/Users/chris/Documents/uni_work/tergm_data/2d/2dBayesOptFixed/AEI/25/log/AEI-',
-#            '/Users/chris/Documents/uni_work/tergm_data/2d/2dBayesOptFixed/UCB/25/UCB-',
-#            '/Users/chris/Documents/uni_work/tergm_data/2d/2dBayesOptFixed/UCB/25/log/UCB-',
-#            '/Users/chris/Documents/uni_work/tergm_data/2d/2dBayesOptFixed/CL/6x4/CL-',
-#            '/Users/chris/Documents/uni_work/tergm_data/2d/2dBayesOptFixed/CL/6x4/log/CL-')
-# names <- c('EI', 'EI+log', 'AEI', 'AEI+log', 'UCB', 'UCB+log', 'CL', 'CL+log')
+files <- c('/Users/chris/Documents/uni_work/tergm_data/2d/2dBayesOptFixed/EI/25/EI-',
+           '/Users/chris/Documents/uni_work/tergm_data/2d/2dBayesOptFixed/EI/25/log/EI-',
+           '/Users/chris/Documents/uni_work/tergm_data/2d/2dBayesOptFixed/AEI/25/AEI-',
+           '/Users/chris/Documents/uni_work/tergm_data/2d/2dBayesOptFixed/AEI/25/log/AEI-',
+           '/Users/chris/Documents/uni_work/tergm_data/2d/2dBayesOptFixed/UCB/25/UCB-',
+           '/Users/chris/Documents/uni_work/tergm_data/2d/2dBayesOptFixed/UCB/25/log/UCB-',
+           '/Users/chris/Documents/uni_work/tergm_data/2d/2dBayesOptFixed/CL/6x4/CL-',
+           '/Users/chris/Documents/uni_work/tergm_data/2d/2dBayesOptFixed/CL/6x4/log/CL-')
+names <- c('EI', 'EI+log', 'AEI', 'AEI+log', 'UCB', 'UCB+log', 'CL', 'CL+log')
 
 
 # files <- c('/Users/chris/Documents/uni_work/tergm_data/2d/2dBayesOptFixed/EI/25/EI-',
@@ -215,12 +215,12 @@ distances <- list()
 #            '/Users/chris/Documents/uni_work/tergm_data/2d/2dBayesOptFixed/EI/25/sqrt/EI-')
 # names <- c('EI', 'EI+log', 'EI+sqrt')
 
-files <- c('/Users/chris/Documents/uni_work/tergm_data/2d/2dBayesOptFixed/EI/25/exp+log/EI-',
-           '/Users/chris/Documents/uni_work/tergm_data/2d/2dBayesOptFixed/EI/25/gauss+log/EI-',
-           '/Users/chris/Documents/uni_work/tergm_data/2d/2dBayesOptFixed/EI/25/matern3_2+log/EI-',
-           '/Users/chris/Documents/uni_work/tergm_data/2d/2dBayesOptFixed/EI/25/powexp+log/EI-',
-           '/Users/chris/Documents/uni_work/tergm_data/2d/2dBayesOptFixed/EI/25/log/EI-')
-names <- c('Exponential', 'Gauss', 'Matérn(3,2)', 'Power Exponential', 'Matérn(5,2)')
+# files <- c('/Users/chris/Documents/uni_work/tergm_data/2d/2dBayesOptFixed/EI/25/exp+log/EI-',
+#            '/Users/chris/Documents/uni_work/tergm_data/2d/2dBayesOptFixed/EI/25/gauss+log/EI-',
+#            '/Users/chris/Documents/uni_work/tergm_data/2d/2dBayesOptFixed/EI/25/matern3_2+log/EI-',
+#            '/Users/chris/Documents/uni_work/tergm_data/2d/2dBayesOptFixed/EI/25/powexp+log/EI-',
+#            '/Users/chris/Documents/uni_work/tergm_data/2d/2dBayesOptFixed/EI/25/log/EI-')
+# names <- c('Exponential', 'Gauss', 'Matérn(3,2)', 'Power Exponential', 'Matérn(5,2)')
 
 
 for (fi in 1:length(files)) {
@@ -281,15 +281,15 @@ ggsave(file_name, plot = plt, width = width, height = height, dpi = 300)
 distances <- list()
 
 
-# files <- c('/Users/chris/Documents/uni_work/tergm_data_from_other/2dBayesOptMore/EI/plain/EI-',
-#            '/Users/chris/Documents/uni_work/tergm_data_from_other/2dBayesOptMore/AEI/plain/AEI-',
-#            '/Users/chris/Documents/uni_work/tergm_data_from_other/2dBayesOptMore/UCB/plain/UCB-',
-#            '/Users/chris/Documents/uni_work/tergm_data_from_other/2dBayesOptMore/CL/plain/CL-',
-#            '/Users/chris/Documents/uni_work/tergm_data_from_other/2dBayesOptMore/EI/log/EI-',
-#            '/Users/chris/Documents/uni_work/tergm_data_from_other/2dBayesOptMore/AEI/log/AEI-',
-#            '/Users/chris/Documents/uni_work/tergm_data_from_other/2dBayesOptMore/UCB/log/UCB-',
-#            '/Users/chris/Documents/uni_work/tergm_data_from_other/2dBayesOptMore/CL/log/CL-')
-# names <- c('EI', 'AEI', 'UCB', 'CL', 'EI+log', 'AEI+log', 'UCB+log', 'CL+log')
+files <- c('/Users/chris/Documents/uni_work/tergm_data_from_other/2dBayesOptMore/EI/plain/EI-',
+           '/Users/chris/Documents/uni_work/tergm_data_from_other/2dBayesOptMore/AEI/plain/AEI-',
+           '/Users/chris/Documents/uni_work/tergm_data_from_other/2dBayesOptMore/UCB/plain/UCB-',
+           '/Users/chris/Documents/uni_work/tergm_data_from_other/2dBayesOptMore/CL/plain/CL-',
+           '/Users/chris/Documents/uni_work/tergm_data_from_other/2dBayesOptMore/EI/log/EI-',
+           '/Users/chris/Documents/uni_work/tergm_data_from_other/2dBayesOptMore/AEI/log/AEI-',
+           '/Users/chris/Documents/uni_work/tergm_data_from_other/2dBayesOptMore/UCB/log/UCB-',
+           '/Users/chris/Documents/uni_work/tergm_data_from_other/2dBayesOptMore/CL/log/CL-')
+names <- c('EI', 'AEI', 'UCB', 'CL', 'EI+log', 'AEI+log', 'UCB+log', 'CL+log')
 
 # files <- c('/Users/chris/Documents/uni_work/tergm_data_from_other/2dBayesOptMore/EI/Exp/log/EI-Exp-',
 #            '/Users/chris/Documents/uni_work/tergm_data_from_other/2dBayesOptMore/EI/Gauss/log/EI-Gauss-',
@@ -303,13 +303,13 @@ distances <- list()
 #            '/Users/chris/Documents/uni_work/tergm_data_from_other/2dBayesOptMore/CL/PowExp/log/CL-PowExp-',
 #            '/Users/chris/Documents/uni_work/tergm_data_from_other/2dBayesOptMore/CL/log/CL-')
 
-files <- c('/Users/chris/Documents/uni_work/tergm_data_from_other/2dBayesOptMore/UCB/Exp/log/UCB-Exp-',
-           '/Users/chris/Documents/uni_work/tergm_data_from_other/2dBayesOptMore/UCB/Gauss/log/UCB-Gauss-',
-           '/Users/chris/Documents/uni_work/tergm_data_from_other/2dBayesOptMore/UCB/Mat32/log/UCB-Mat32-',
-           '/Users/chris/Documents/uni_work/tergm_data_from_other/2dBayesOptMore/UCB/PowExp/log/UCB-PowExp-',
-           '/Users/chris/Documents/uni_work/tergm_data_from_other/2dBayesOptMore/UCB/log/UCB-')
-
-names <- c('Exponential', 'Gauss', 'Matérn(3,2)', 'Power Exponential', 'Matérn(5,2)')
+# files <- c('/Users/chris/Documents/uni_work/tergm_data_from_other/2dBayesOptMore/UCB/Exp/log/UCB-Exp-',
+#            '/Users/chris/Documents/uni_work/tergm_data_from_other/2dBayesOptMore/UCB/Gauss/log/UCB-Gauss-',
+#            '/Users/chris/Documents/uni_work/tergm_data_from_other/2dBayesOptMore/UCB/Mat32/log/UCB-Mat32-',
+#            '/Users/chris/Documents/uni_work/tergm_data_from_other/2dBayesOptMore/UCB/PowExp/log/UCB-PowExp-',
+#            '/Users/chris/Documents/uni_work/tergm_data_from_other/2dBayesOptMore/UCB/log/UCB-')
+# 
+# names <- c('Exponential', 'Gauss', 'Matérn(3,2)', 'Power Exponential', 'Matérn(5,2)')
 
 
 for (fi in 1:length(files)) {
@@ -324,11 +324,11 @@ for (fi in 1:length(files)) {
   
 }
 
-# print(distances)
-# mean(distances[['EI']])
-# mean(distances[['AEI']])
-# mean(distances[['CL']])
-# mean(distances[['UCB']])
+print(distances)
+mean(distances[['EI']])
+mean(distances[['AEI']])
+mean(distances[['CL']])
+mean(distances[['UCB']])
 # 
 # var(distances[['CL']])
 # var(distances[['EI']])
@@ -411,27 +411,144 @@ colMeans(times)
 
 ############## customOpt
 
-results <- read.csv('/Users/chris/Documents/uni_work/tergm_data/customOptResults/results.csv')
-results[,6] <- sqrt((-5.19-results[,3])^2+(2.10-results[,4])^2)
+results <- read.csv('/Users/chris/Documents/uni_work/tergm_data/customOptResults/resultsFromGrid.csv')
 results
-ggplot(data=results, aes(y=V6)) + geom_boxplot() + theme_minimal()
+results[,'euclidean'] <- sqrt((-5.202-results[,3])^2+(2.197-results[,4])^2)
+results[,'boolConverged'] <- sqrt((-5.202-results[,3])^2+(2.197-results[,4])^2) <= 0.2
+ggplot(data=results, aes(y=euclidean)) + geom_boxplot() + theme_minimal()
+
+results
+#results[,6] <- results[,5]<0.1
+sum(results[,'boolConverged'])
+results
+ind <- results[,'euclidean'] < 1
+ind
+
+results$custom_bins <- cut(results$euclidean, 
+                           breaks = c(0, 0.5, 1.5, 2.5, Inf), 
+                           labels = c("0-0.5", "0.5-1.5", "1.5-2.5", "2.5+"),
+                           include.lowest = TRUE)
+
+# To Plot The Grid of Starting Points:
+plt1 <- ggplot(data=results, mapping=aes(x=X, y=X.1))+
+  geom_point()+theme_minimal()+
+  labs(x = "theta1", y = "theta2")+
+  geom_point(data = data.frame(X = -5.1, X.1 = 2.1), aes(x = X, y = X.1), color = "red")+
+  geom_text(data = data.frame(X = -5.1, X.1 = 2.1), aes(x = X, y = X.1, label = "true theta"), vjust = -0.5, color = "red")
+
+ggsave('/Users/chris/Documents/uni_work/tergm_data/customOptResults/initGrid.png', plot = plt1, width = 6, height = 4, dpi = 300)
+
+
+# Use viridis color palette for the custom bins
+library(viridis)
+
+plt <- ggplot(data = results, mapping = aes(x = X, y = X.1, color = custom_bins)) +
+  geom_point() +
+  geom_point(data = data.frame(X = -5.1, X.1 = 2.1), aes(x = X, y = X.1), color = "black") +
+  geom_text(data = data.frame(X = -5.1, X.1 = 2.1), aes(x = X, y = X.1, label = "true theta"), vjust = -0.5, color = "black") +
+  theme_minimal() +
+  labs(x = "theta1", y = "theta2", color = "Converged") +
+  scale_color_viridis(discrete = TRUE)
+
+plt
+ggsave('/Users/chris/Documents/uni_work/tergm_data/customOptResults/gridPlot0p2ppppppp.png', plot = plt, width = 6, height = 4, dpi = 300)
+
+
+
+results <- read.csv('/Users/chris/Documents/uni_work/tergm_data/customOptResults/results.csv')
+results
+results[,'euclidean'] <- sqrt((-5.19-results[,3])^2+(2.10-results[,4])^2)
+results[,'boolConverged'] <- sqrt((-5.19-results[,3])^2+(2.10-results[,4])^2) <= 0.2
+ggplot(data=results, aes(y=euclidean)) + geom_boxplot() + theme_minimal()
 
 results
 #results[,6] <- results[,5]<0.1
 
 results
 
-ggplot(data = results, mapping = aes(x = X, y = X.1, color = V6)) +
+plt <- ggplot(data = results, mapping = aes(x = X, y = X.1, color = boolConverged)) +
   geom_point() +
   geom_point(data = data.frame(X = -5.1, X.1 = 2.1), aes(x = X, y = X.1), color = "black") +
   geom_text(data = data.frame(X = -5.1, X.1 = 2.1), aes(x = X, y = X.1, label = "true theta"), vjust = -0.5, color = "black") +
   theme_minimal() +
-  labs(x = "theta2", y = "theta1", color="Converged") + 
+  labs(x = "theta1", y = "theta2", color="Converged") + 
   scale_color_gradient(low = "blue", high = "red")
 
+results
+
+plt <- ggplot(data = results, mapping = aes(X, X.1, z=euclidean)) + 
+  geom_contour_filled() + 
+  theme_minimal() + 
+  labs(x = "theta1", y = "theta2")
+
+
+ggsave('/Users/chris/Documents/uni_work/tergm_data/customOptResults/contour.png', plot = plt, width = 6, height = 4, dpi = 300)
+
+
+########################################
+thetas <- read.csv('/Users/chris/Documents/uni_work/tergm_data/results/thetas.csv')
+thetas
+
+plt1 <- ggplot(data=thetas, mapping=aes(x=theta1, y=theta2))+
+  geom_point()+theme_minimal()+
+  labs(x = "theta1", y = "theta2")+
+  geom_point(data = data.frame(X = -5.1, X.1 = 2.1), aes(x = X, y = X.1), color = "red")
+plt1
+ggsave('/Users/chris/Documents/uni_work/tergm_data/results/initConfigsAlgoComp.png', plot = plt1, width = 6, height = 4, dpi = 300)
+
+bo <- read.csv('/Users/chris/Documents/uni_work/tergm_data/results/bayesOpt.csv')
+co <- read.csv('/Users/chris/Documents/uni_work/tergm_data/results/customOpt.csv')
+gd <- read.csv('/Users/chris/Documents/uni_work/tergm_data/results/GD.csv')
+
+gd[31,'times'] <- gd[31,'times']/60
+gd
+mean(gd[,'times'])
+var(gd[,'times'])
+
+var(bo[,'times'])
+
+co[which(co[,'times']>10),'times'] <- co[which(co[,'times']>10),'times']/60
+co
+mean(co[,'times'])
+var(co[,'times'])
+co
+thetas
+bo
+bo[,'euclidean'] <- sqrt((-5.187386-bo[,1])^2+(2.197225-bo[,2])^2)
+bo[,'category'] <- rep('Bayesian Optimization', times=50)
+co[,'euclidean'] <- sqrt((-5.187386-co[,1])^2+(2.197225-co[,2])^2)
+co[,'category'] <- rep('Alternate BO', times=50)
+gd[,'euclidean'] <- sqrt((-5.187386-gd[,1])^2+(2.197225-gd[,2])^2)
+gd[,'category'] <- rep('Gradient Descent', times=50)
+
+sum(co[,'times'])/50
+
+gd[which(gd$euclidean == Inf),'euclidean'] = 15
+
+
+dat <- rbind(bo[,c('euclidean', 'category')], co[,c('euclidean', 'category')], gd[,c('euclidean', 'category')])
+
+gd
+thetas
 
 
 
+p <- ggplot(data=dat, aes(x=category, y=euclidean)) + 
+  geom_boxplot() + 
+  theme_minimal()
 
+labels_to_add <- data.frame(
+  category = c('Gradient Descent'),
+  value = c(15),
+  label = c('Infinity (optimization failed)')
+)
+
+plt <- p + geom_text(data = labels_to_add, aes(x = category, y = value, label = label), vjust = 1.5) + xlab("Optimization Approach") + ylab("Euclidean Distance to True Parameter")
+
+ggsave('/Users/chris/Documents/uni_work/tergm_data/results/comparison.png', plot = plt, width = 6, height = 4, dpi = 300)
+
+
+thetas <- read.csv('/Users/chris/Documents/uni_work/tergm_data/results/thetas.csv')
+ggplot(thetas, aes(x=theta1, y=theta2)) + theme_minimal() + geom_point()
 
 

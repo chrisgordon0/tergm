@@ -50,6 +50,12 @@ tergm_MCMC_sample <- function(nw, model, model.mon = NULL,
                                verbose=FALSE,...,
                                eta = ergm.eta(theta, model$etamap)
                                ){
+  
+  print(control$time.burnin)
+  print(control$time.interval)
+  print(control$time.samplesize)
+  
+  
   # this is where we combine models and pad out eta 
   # with 0s as necessary to accomodate the monitoring model
   model.comb <- c(model, model.mon)
